@@ -27,20 +27,20 @@ exactly how this distro differs from stock Arch.
 To see what changed upstream when bumping archiso:
 
 ```sh
-git fetch --depth 1 https://gitlab.archlinux.org/archlinux/archiso.git tag v93
+git fetch --depth 1 https://gitlab.archlinux.org/archlinux/archiso.git tag v92 tag v93
 git diff v92:configs/releng v93:configs/releng
 ```
 
 ## Building
 
-mkarchiso only runs on Arch Linux, as root. From Windows, use the Arch WSL
-distro (`wsl --install archlinux`), then build from a clone on the Linux
-filesystem — a checkout on NTFS loses the exec bits and symlinks the profile
-depends on:
+mkarchiso only runs on Arch Linux, as root. Development happens in the Arch
+WSL distro (`wsl --install archlinux`), with the repo on the Linux filesystem —
+never a Windows drive, where the exec bits and symlinks the profile depends on
+are lost:
 
 ```sh
-sudo pacman -Syu --needed archiso git
-git clone /mnt/e/archdev ~/archdev
+sudo pacman -Syu --needed archiso git github-cli
+gh repo clone Lungren2/archdev ~/archdev
 cd ~/archdev
 sudo ./scripts/build.sh
 ```
@@ -52,11 +52,11 @@ sudo pacman -S --needed qemu-desktop edk2-ovmf
 run_archiso -u -i out/*.iso
 ```
 
-## Working on this repo from Windows
+## Flashing
 
-The repo's git config sets `core.autocrlf=false` and `core.symlinks=true`, and
-`.gitattributes` forces LF endings. Developer Mode must stay enabled for git to
-create symlinks. When editing on Windows, make sure your editor saves with LF.
+WSL can't see USB drives directly, so write the ISO from Windows. The ISO is
+reachable at `\\wsl$\archlinux\home\<user>\archdev\out\`. Use a raw/DD-mode
+writer (Rufus in DD mode, balenaEtcher) — this wipes the target drive.
 
 ## License
 
