@@ -19,6 +19,10 @@ profiles, recovery) serves that.
    *review → commit* or *discard*, for files and system changes alike.
 5. **History is recorded, not remembered.** What happened on the machine is an
    append-only event log agents can query, not something a model reconstructs.
+6. **Any source that can be local, is.** Every program on the system has its
+   source on the machine: the exact installed version, as a git repo, next to
+   the recipe that builds it. Changing any part of the system is *edit →
+   rebuild → installed*, and the change survives updates.
 
 ## What agents actually consume
 
@@ -81,6 +85,49 @@ workspace diff plus every brokered system change. Before applying any system
 change, the broker takes a Btrfs snapshot of root, so a bad change is undone
 with one rollback.
 
+## Local source
+
+Modifying a program should take one request to an agent. That needs the
+source on disk, a build that works without archaeology, and a way to keep the
+change when upstream moves.
+
+**Packaging rule.** This distro's own packages build from source. Prebuilt
+binaries are used only when no source exists (firmware, proprietary drivers),
+or as an explicit `-bin` fallback package. Example: `t3code-cli` builds T3 Code
+from its source tarball, and `t3code-cli-bin` repackages the release binary.
+
+**Everything else on demand.** Packages from Arch and CachyOS are already
+built from public recipes, so their source is fetched at the installed version
+the first time anyone touches it, then kept:
+
+| Origin | Recipe source |
+| --- | --- |
+| Arch | `gitlab.archlinux.org/archlinux/packaging/packages/<pkgbase>` (`pkgctl repo clone`) |
+| CachyOS | `github.com/CachyOS/CachyOS-PKGBUILDS` |
+| AUR | `aur.archlinux.org/<pkgbase>.git` |
+| This distro | `packages/` in this repo |
+
+**Layout.** `/src/<pkgbase>/` is a git repo holding the recipe plus the
+unpacked upstream source. The pristine upstream is the first commit, so local
+changes are ordinary git commits. This repo lives at `/src/archdev`, so the OS
+is edited and rebuilt from itself. Agent sessions get `/src` mounted.
+
+**Workflow.**
+
+```
+ethan src get <pkg>      fetch recipe + upstream source at the installed version
+ethan src build <pkg>    build in a sandbox → local overlay repo → install
+ethan src diff <pkg>     local changes vs. upstream
+ethan src rebase <pkg>   carry local changes onto a new upstream version
+ethan src drop <pkg>     return to the distro's build
+```
+
+Builds land in a `[local]` overlay repo ranked above every other repo, so a
+modified package shadows the upstream one. When upstream ships a new version
+of a package you've modified, the update rebases your commits and rebuilds. If
+the rebase conflicts, it opens an agent session to resolve it, which you
+review like any other session.
+
 ## The `ethan` contract (first cut)
 
 Read-only operations come first. Mutations are added only once they go
@@ -109,15 +156,17 @@ tools.
 
 ## Milestones
 
-1. **Agent-ready base:** agent CLIs and the dev toolchain in the image, a
+1. **Agent-ready base:** agent tooling and the dev toolchain in the image, a
    Btrfs-on-install layout, and `/etc/ethan/AGENTS.md`.
-2. **Read-only contract:** `ethand` + `ethan` CLI + MCP server for `machine`,
+2. **Local source:** `/src`, `ethan src get|build|diff|rebase|drop`, the
+   `[local]` overlay repo, and rebase-on-update.
+3. **Read-only contract:** `ethand` + `ethan` CLI + MCP server for `machine`,
    `package query`, `service status`, `history query`.
-3. **Sessions:** sandboxed agent sessions with workspace snapshots and
+4. **Sessions:** sandboxed agent sessions with workspace snapshots and
    review/commit/discard.
-4. **Broker:** capability grants and audited system mutations with automatic
+5. **Broker:** capability grants and audited system mutations with automatic
    root snapshots.
-5. **History & memory:** event log fed by pacman hooks, snapper, journald and
+6. **History & memory:** event log fed by pacman hooks, snapper, journald and
    broker audit, plus per-agent memory.
-6. **Agent desktops:** headless Wayland per session for computer use, and a
+7. **Agent desktops:** headless Wayland per session for computer use, and a
    supervisor view in the human shell.
