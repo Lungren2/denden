@@ -1,0 +1,8 @@
+# Everything in this repo ends up on a Linux system. Never let Windows
+# tooling rewrite line endings — a CRLF in a shell script breaks the ISO.
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.iso  binary
+*.img  binary
