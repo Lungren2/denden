@@ -55,8 +55,18 @@ run_archiso -u -i out/*.iso
 ## Flashing
 
 WSL can't see USB drives directly, so write the ISO from Windows. The ISO is
-reachable at `\\wsl$\archlinux\home\<user>\archdev\out\`. Use a raw/DD-mode
-writer (Rufus in DD mode, balenaEtcher) — this wipes the target drive.
+reachable at `\\wsl$\archlinux\home\<user>\archdev\out\`.
+
+`scripts/flash.ps1` wipes a USB disk, writes the ISO in DD mode and verifies it
+by SHA-256. Run it from an elevated PowerShell; it refuses non-USB and boot
+disks and asks you to type `ERASE` first:
+
+```powershell
+Get-Disk   # note the USB disk's Number
+pwsh -ExecutionPolicy Bypass -File .\scripts\flash.ps1 -IsoPath <iso> -DiskNumber <n>
+```
+
+Rufus (DD mode) or balenaEtcher work too.
 
 ## License
 
