@@ -57,3 +57,13 @@ run_archiso -u -i out/*.iso
 The repo's git config sets `core.autocrlf=false` and `core.symlinks=true`, and
 `.gitattributes` forces LF endings. Developer Mode must stay enabled for git to
 create symlinks. When editing on Windows, make sure your editor saves with LF.
+
+## License
+
+Original work in this repo is licensed under the [MIT License](LICENSE).
+
+Everything under `archiso/` is derived from
+[archiso](https://gitlab.archlinux.org/archlinux/archiso)'s `releng` profile and
+remains under **GPL-3.0-or-later** (see
+[`LICENSES/GPL-3.0-or-later.txt`](LICENSES/GPL-3.0-or-later.txt)). Changes made
+to files in that directory are distributed under the same license.
