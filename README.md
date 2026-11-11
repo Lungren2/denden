@@ -15,7 +15,8 @@ workflow. Built with [archiso](https://gitlab.archlinux.org/archlinux/archiso).
 | `archiso/airootfs/` | Files overlaid onto the image's root filesystem. |
 | `archiso/profiledef.sh` | ISO name, boot modes, compression, file permissions. |
 | `scripts/build.sh` | Builds the ISO into `out/`. |
-| `docs/ROADMAP.md` | What makes this distro different from vanilla Arch. |
+| `docs/agent-environment.md` | Design of the agent environment: the reason this distro exists. |
+| `docs/ROADMAP.md` | Milestones, in build order. |
 
 ## Upstream baseline
 
