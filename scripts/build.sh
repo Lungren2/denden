@@ -27,5 +27,15 @@ case "${repo_root}" in
 esac
 
 rm -rf -- "${work_dir}"
+build_start="$(mktemp)"
+trap 'rm -f -- "${build_start}"' EXIT
 mkarchiso -v -w "${work_dir}" -o "${out_dir}" "${repo_root}/archiso"
-echo "ISO written to ${out_dir}"
+
+# mkarchiso can report failure (e.g. a mirror timeout during pacstrap) and
+# still exit 0, so only trust a freshly written ISO.
+iso="$(find "${out_dir}" -maxdepth 1 -name '*.iso' -newer "${build_start}" -print -quit 2>/dev/null)"
+if [[ -z ${iso} ]]; then
+  echo "error: mkarchiso finished but produced no ISO; see the log above" >&2
+  exit 1
+fi
+echo "ISO written to ${iso}"
