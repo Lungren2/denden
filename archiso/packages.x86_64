@@ -9,6 +9,8 @@ bind
 bolt
 brltty
 btrfs-progs
+cachyos-keyring
+cachyos-mirrorlist
 clonezilla
 cloud-init
 cryptsetup
@@ -50,7 +52,7 @@ less
 lftp
 libfido2
 libusb-compat
-linux
+linux-cachyos
 linux-firmware
 linux-firmware-marvell
 livecd-sounds
@@ -105,6 +107,7 @@ squashfs-tools
 sudo
 syslinux
 systemd-resolvconf
+t3code-cli-bin
 tcpdump
 terminus-font
 testdisk

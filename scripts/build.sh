@@ -26,10 +26,30 @@ case "${repo_root}" in
     ;;
 esac
 
+if [[ ! -f /etc/pacman.d/cachyos-mirrorlist ]]; then
+  echo "error: CachyOS mirrorlist missing; run: sudo ./scripts/setup-build-host.sh" >&2
+  exit 1
+fi
+
+# Build packages/ into the local repo first. makepkg refuses root, so drop back
+# to the user who invoked sudo.
+if [[ -n ${SUDO_USER:-} && ${SUDO_USER} != root ]]; then
+  sudo -u "${SUDO_USER}" -- "${repo_root}/scripts/build-packages.sh"
+elif [[ ! -f ${repo_root}/repo/x86_64/archdev.db.tar.gz ]]; then
+  echo "error: local repo not built; run scripts/build-packages.sh as a normal user first" >&2
+  exit 1
+fi
+
 rm -rf -- "${work_dir}"
+mkdir -p -- "${work_dir}"
 build_start="$(mktemp)"
 trap 'rm -f -- "${build_start}"' EXIT
-mkarchiso -v -w "${work_dir}" -o "${out_dir}" "${repo_root}/archiso"
+
+# mkarchiso needs absolute repo paths, which depend on where this clone lives.
+pacman_conf="${work_dir}/pacman.conf.in"
+sed "s|@ARCHDEV_REPO@|${repo_root}/repo/\$arch|" "${repo_root}/archiso/pacman.conf" > "${pacman_conf}"
+
+mkarchiso -v -C "${pacman_conf}" -w "${work_dir}" -o "${out_dir}" "${repo_root}/archiso"
 
 # mkarchiso can report failure (e.g. a mirror timeout during pacstrap) and
 # still exit 0, so only trust a freshly written ISO.

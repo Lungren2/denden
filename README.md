@@ -1,7 +1,8 @@
 # archdev
 
-A personal Arch Linux–based distro tuned for an AI-assisted development
-workflow. Built with [archiso](https://gitlab.archlinux.org/archlinux/archiso).
+A personal Arch Linux–based distro built as an environment for AI agents to
+work in effectively. It uses CachyOS's kernel and packages on top of Arch, and
+is built with [archiso](https://gitlab.archlinux.org/archlinux/archiso).
 
 > `archdev` is a working name. Rename the repo and set `iso_name` /
 > `iso_label` in `archiso/profiledef.sh` once a name is picked.
@@ -14,7 +15,10 @@ workflow. Built with [archiso](https://gitlab.archlinux.org/archlinux/archiso).
 | `archiso/packages.x86_64` | Packages installed into the live image. |
 | `archiso/airootfs/` | Files overlaid onto the image's root filesystem. |
 | `archiso/profiledef.sh` | ISO name, boot modes, compression, file permissions. |
-| `scripts/build.sh` | Builds the ISO into `out/`. |
+| `archiso/pacman.conf` | Repos the image is built from: local `archdev`, `cachyos`, then Arch. |
+| `packages/` | PKGBUILDs for this distro's own packages (e.g. `t3code-cli`). |
+| `scripts/setup-build-host.sh` | One-time setup of an Arch build host. |
+| `scripts/build.sh` | Builds `packages/` into a local repo, then the ISO into `out/`. |
 | `docs/agent-environment.md` | Design of the agent environment: the reason this distro exists. |
 | `docs/ROADMAP.md` | Milestones, in build order. |
 
@@ -40,11 +44,16 @@ never a Windows drive, where the exec bits and symlinks the profile depends on
 are lost:
 
 ```sh
-sudo pacman -Syu --needed archiso git github-cli
+sudo pacman -Syu --needed git github-cli
 gh repo clone Lungren2/archdev ~/archdev
 cd ~/archdev
+sudo ./scripts/setup-build-host.sh   # once: archiso, makepkg, CachyOS key + mirrorlist
 sudo ./scripts/build.sh
 ```
+
+`build.sh` first builds every `packages/*/PKGBUILD` into a local pacman repo
+(`repo/x86_64/`, as your user), then builds the ISO from Arch, CachyOS and
+that local repo.
 
 Test the result without real hardware:
 

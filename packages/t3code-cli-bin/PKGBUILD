@@ -1,0 +1,50 @@
+# Maintainer: Ethan <ethanogle012@outlook.com>
+#
+# Prebuilt fallback for t3code-cli (which builds from source). The headless
+# `t3` command: runs T3 Code as a server (`t3 serve`, `t3 up`)
+# that you open from a browser, so it works without a desktop. The Electron
+# desktop app is packaged separately in the AUR as t3code-bin.
+
+pkgname=t3code-cli-bin
+pkgver=0.1.9
+pkgrel=1
+pkgdesc='T3 Code control plane for coding agents (headless server and CLI)'
+arch=('x86_64')
+url='https://github.com/pingdotgg/t3code'
+license=('MIT')
+depends=('glibc' 'gcc-libs')
+optdepends=(
+  'claude-code: Claude Code provider'
+  'openai-codex: Codex provider'
+  'git: project and worktree management'
+  'tailscale: remote access with t3 up --tailscale-serve'
+)
+provides=('t3' "t3code-cli=${pkgver}")
+conflicts=('t3code-cli')
+# The release bundles a compiled runtime; stripping corrupts it.
+options=('!strip' '!debug')
+_dist="t3-${pkgver}-linux-x64"
+source=(
+  "https://github.com/pingdotgg/t3code/releases/download/v${pkgver}/${_dist}.tar.gz"
+  "${pkgname}-${pkgver}-LICENSE::https://raw.githubusercontent.com/pingdotgg/t3code/v${pkgver}/LICENSE"
+)
+sha256sums=(
+  '0141025335da334759cecd8db3483e09772f3600ca03674698524e7d94291362'
+  '935d8f2af0c703f9c39517ee57cc4930b19d02d533be930b63f0e82f93614b43'
+)
+
+package() {
+  install -d "${pkgdir}/opt/${pkgname}"
+  cp -a --no-preserve=ownership "${srcdir}/${_dist}/." "${pkgdir}/opt/${pkgname}/"
+  chmod -R u=rwX,go=rX "${pkgdir}/opt/${pkgname}"
+
+  # A wrapper rather than a symlink, so the binary always finds its bundled
+  # client, node_modules and lib/ next to itself.
+  install -Dm755 /dev/stdin "${pkgdir}/usr/bin/t3" <<'EOF'
+#!/bin/sh
+exec /opt/t3code-cli-bin/t3 "$@"
+EOF
+
+  install -Dm644 "${srcdir}/${pkgname}-${pkgver}-LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

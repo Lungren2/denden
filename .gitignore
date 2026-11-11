@@ -3,3 +3,9 @@
 /out/
 *.iso
 build.log
+
+# Local package repo and makepkg leftovers
+/repo/
+/packages/*/src/
+/packages/*/pkg/
+*.pkg.tar.zst
