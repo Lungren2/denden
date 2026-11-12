@@ -49,7 +49,15 @@ trap 'rm -f -- "${build_start}"' EXIT
 pacman_conf="${work_dir}/pacman.conf.in"
 sed "s|@DENDEN_REPO@|${repo_root}/repo/\$arch|" "${repo_root}/archiso/pacman.conf" > "${pacman_conf}"
 
-mkarchiso -v -C "${pacman_conf}" -w "${work_dir}" -o "${out_dir}" "${repo_root}/archiso"
+# The installer installs Den Den's own packages from a copy of the local repo
+# inside the image, so build from a copy of the profile with the repo added.
+profile="${work_dir}/profile"
+cp -a -- "${repo_root}/archiso" "${profile}"
+mkdir -p -- "${profile}/airootfs/opt/denden/repo"
+cp -a -- "${repo_root}"/repo/x86_64/{denden.db,denden.db.tar.gz,denden.files,denden.files.tar.gz,*.pkg.tar.zst} \
+  "${profile}/airootfs/opt/denden/repo/"
+
+mkarchiso -v -C "${pacman_conf}" -w "${work_dir}" -o "${out_dir}" "${profile}"
 
 # mkarchiso can report failure (e.g. a mirror timeout during pacstrap) and
 # still exit 0, so only trust a freshly written ISO.

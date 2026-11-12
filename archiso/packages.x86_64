@@ -11,12 +11,15 @@ brltty
 btrfs-progs
 cachyos-keyring
 cachyos-mirrorlist
+cachyos-v3-mirrorlist
+cachyos-v4-mirrorlist
 claude-code
 clonezilla
 cloud-init
 cryptsetup
 darkhttpd
 ddrescue
+denden-installer
 dhcpcd
 diffutils
 dmidecode

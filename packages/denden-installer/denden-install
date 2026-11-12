@@ -1,0 +1,414 @@
+#!/usr/bin/env bash
+# denden-install: install Den Den from the live image onto a disk.
+#
+#   denden-install                       # asks for everything
+#   denden-install --disk /dev/nvme1n1   # erase this disk and use all of it
+#   denden-install --free-space /dev/sda # use the largest free gap on this
+#                                        # disk; existing partitions are kept
+#
+# Other options: --hostname NAME, --user NAME, --timezone Area/City,
+# --keymap MAP, --yes (skip the typed confirmation; for automated tests),
+# --host-cache (download packages into the live system's pacman cache rather
+# than the new system's, e.g. a shared cache mounted there by a test VM).
+# The user's password is asked for, or read from $DENDEN_PASSWORD.
+#
+# Layout: a 4 GiB FAT32 boot partition (kernels and bootable snapshots live
+# there) and one Btrfs partition with the subvolumes @, @home, @src,
+# @snapshots, @log, @pkg and @docker. Boots with Limine; root snapshots are
+# taken around every pacman transaction and appear in the boot menu.
+set -euo pipefail
+
+readonly LOG=/var/log/denden-install.log
+readonly TARGET=/mnt
+readonly ESP_SIZE_MIB=4096
+readonly MIN_ROOT_GIB=40
+readonly DENDEN_GIT=https://github.com/Lungren2/denden.git
+LIVE_REPO=/opt/denden/repo
+
+mode='' disk='' hostname='' user='' timezone='' keymap='us' assume_yes=0 host_cache=''
+
+die() { echo "error: $*" >&2; exit 1; }
+step() { printf '\n==> %s\n' "$*"; }
+ask() { # ask VAR "Prompt" [default]
+  local reply
+  read -rp "$2${3:+ [$3]}: " reply
+  printf -v "$1" '%s' "${reply:-${3:-}}"
+}
+
+usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+
+while (($#)); do
+  case $1 in
+    --disk) mode=whole disk=${2:?}; shift 2 ;;
+    --free-space) mode=free disk=${2:?}; shift 2 ;;
+    --hostname) hostname=${2:?}; shift 2 ;;
+    --user) user=${2:?}; shift 2 ;;
+    --timezone) timezone=${2:?}; shift 2 ;;
+    --keymap) keymap=${2:?}; shift 2 ;;
+    --repo) LIVE_REPO=${2:?}; shift 2 ;;
+    --yes) assume_yes=1; shift ;;
+    --host-cache) host_cache=1; shift ;;
+    -h|--help) usage ;;
+    *) echo "unknown option: $1" >&2; usage 1 ;;
+  esac
+done
+
+[[ ${EUID} -eq 0 ]] || die "run as root"
+[[ -d /sys/firmware/efi/efivars ]] || die "boot the live image in UEFI mode; Den Den doesn't support BIOS boot"
+[[ -f ${LIVE_REPO}/denden.db ]] || die "no Den Den package repo at ${LIVE_REPO}"
+exec > >(tee -a "${LOG}") 2>&1
+
+# --- Choices ----------------------------------------------------------------
+
+# The disk the live system booted from, which must never be a target.
+live_disk=''
+if src=$(findmnt -no SOURCE /run/archiso/bootmnt 2>/dev/null); then
+  live_disk=/dev/$(lsblk -no PKNAME "${src}" | head -n1)
+fi
+
+if [[ -z ${disk} ]]; then
+  step "Disks"
+  lsblk -dpno NAME,SIZE,MODEL,TRAN -e 7,11 | grep -v "^${live_disk:-/nonexistent} " || true
+  ask disk "Disk to install to"
+  echo "  1) Erase ${disk} and use all of it"
+  echo "  2) Use the largest free space on ${disk}, keeping its partitions"
+  ask choice "Choice" 2
+  case ${choice} in 1) mode=whole ;; 2) mode=free ;; *) die "no such choice" ;; esac
+fi
+[[ -b ${disk} && $(lsblk -dno TYPE "${disk}") == disk ]] || die "${disk} is not a disk"
+[[ ${disk} != "${live_disk}" ]] || die "${disk} is the live USB this installer runs from"
+
+[[ -n ${hostname} ]] || ask hostname "Hostname" denden
+[[ -n ${user} ]] || ask user "Username"
+[[ ${user} =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die "invalid username '${user}'"
+if [[ -z ${timezone} ]]; then
+  guess=$(curl -fsS --max-time 5 'http://ip-api.com/line?fields=timezone' 2>/dev/null || true)
+  ask timezone "Time zone" "${guess:-UTC}"
+fi
+[[ -f /usr/share/zoneinfo/${timezone} ]] || die "unknown time zone '${timezone}'"
+password=${DENDEN_PASSWORD:-}
+if [[ -z ${password} ]]; then
+  read -rsp "Password for ${user}: " password; echo
+  read -rsp "Again: " again; echo
+  [[ ${password} == "${again}" ]] || die "passwords don't match"
+fi
+[[ -n ${password} ]] || die "empty password"
+
+# --- Plan the partitions ----------------------------------------------------
+
+sector_size=$(blockdev --getss "${disk}")
+mib=$((1024 * 1024 / sector_size))   # sectors per MiB
+
+if [[ ${mode} == free ]]; then
+  [[ $(blkid -o value -s PTTYPE "${disk}" 2>/dev/null) == gpt ]] \
+    || die "${disk} has no GPT partition table; free-space installs need GPT"
+  first=$(sgdisk -F "${disk}")
+  last=$(sgdisk -E "${disk}")
+  first=$(( (first + mib - 1) / mib * mib ))   # align to 1 MiB
+  free_gib=$(( (last - first + 1) / mib / 1024 ))
+  plan="the largest free space on ${disk} (${free_gib} GiB); existing partitions are kept"
+else
+  first=$((1 * mib)) last=''
+  free_gib=$(( $(blockdev --getsize64 "${disk}") / 1024 / 1024 / 1024 ))
+  plan="ALL of ${disk} (${free_gib} GiB); everything on it is erased"
+fi
+((free_gib >= ESP_SIZE_MIB / 1024 + MIN_ROOT_GIB)) \
+  || die "need at least $((ESP_SIZE_MIB / 1024 + MIN_ROOT_GIB)) GiB, found ${free_gib} GiB"
+
+step "Plan"
+cat <<EOF
+  Disk:      $(lsblk -dno NAME,SIZE,MODEL "${disk}")
+  Uses:      ${plan}
+  Creates:   a ${ESP_SIZE_MIB} MiB boot partition and a Btrfs partition in the rest
+  Hostname:  ${hostname}
+  User:      ${user} (in wheel and docker; sudo without a password)
+  Time zone: ${timezone}
+EOF
+lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS "${disk}" | sed 's/^/  /'
+if ((!assume_yes)); then
+  name=$(basename "${disk}")
+  ask confirm "Type '${name}' to install"
+  [[ ${confirm} == "${name}" ]] || die "cancelled"
+fi
+
+# --- Partition and format ---------------------------------------------------
+
+step "Partitioning ${disk}"
+if [[ ${mode} == whole ]]; then
+  wipefs -af "${disk}"
+  sgdisk -Z "${disk}"
+  sgdisk -o "${disk}"
+fi
+before=$(lsblk -nro NAME "${disk}" | sort)
+sgdisk -n "0:${first}:+${ESP_SIZE_MIB}M" -t 0:ef00 -c 0:"Den Den boot" "${disk}"
+esp_end=$((first + ESP_SIZE_MIB * mib - 1))
+sgdisk -n "0:$((esp_end + 1)):${last:-0}" -t 0:8300 -c 0:"Den Den" "${disk}"
+partprobe "${disk}"; udevadm settle
+mapfile -t added < <(comm -13 <(echo "${before}") <(lsblk -nro NAME "${disk}" | sort))
+((${#added[@]} == 2)) || die "expected 2 new partitions, found: ${added[*]}"
+esp='' root=''
+for part in "${added[@]}"; do
+  if [[ $(lsblk -no PARTTYPE "/dev/${part}") == c12a7328-f81f-11d2-ba4b-00a0c93ec93b ]]; then
+    esp=/dev/${part}
+  else
+    root=/dev/${part}
+  fi
+done
+[[ -n ${esp} && -n ${root} ]] || die "couldn't tell the new partitions apart: ${added[*]}"
+echo "boot: ${esp}  root: ${root}"
+
+mkfs.fat -F 32 -n DENDEN "${esp}"
+mkfs.btrfs -f -L denden "${root}"
+
+step "Creating Btrfs subvolumes"
+subvols=(@ @home @src @snapshots @log @pkg @docker)
+mount "${root}" "${TARGET}"
+for sv in "${subvols[@]}"; do btrfs subvolume create "${TARGET}/${sv}"; done
+umount "${TARGET}"
+
+opts=noatime,compress=zstd:1
+mount -o "${opts},subvol=@" "${root}" "${TARGET}"
+declare -A mountpoint=(
+  [@home]=home [@src]=src [@snapshots]=.snapshots [@log]=var/log
+  [@pkg]=var/cache/pacman/pkg [@docker]=var/lib/docker
+)
+for sv in "${!mountpoint[@]}"; do
+  mkdir -p "${TARGET}/${mountpoint[${sv}]}"
+  mount -o "${opts},subvol=${sv}" "${root}" "${TARGET}/${mountpoint[${sv}]}"
+done
+mkdir -p "${TARGET}/boot"
+mount -o fmask=0077,dmask=0077 "${esp}" "${TARGET}/boot"
+
+# --- Hardware ---------------------------------------------------------------
+
+step "Detecting hardware"
+# CachyOS's repos built for this CPU: znver4 on Zen 4/5, otherwise the
+# highest x86-64 level the CPU supports.
+levels=$(/usr/lib/ld-linux-x86-64.so.2 --help 2>/dev/null || true)
+family=$(awk -F': ' '/^cpu family/ {print $2; exit}' /proc/cpuinfo)
+vendor=$(awk -F': ' '/^vendor_id/ {print $2; exit}' /proc/cpuinfo)
+if [[ ${vendor} == AuthenticAMD ]] && ((family >= 25)) && grep -qw avx512f /proc/cpuinfo; then
+  tier=znver4
+elif grep -q 'x86-64-v4 (supported' <<<"${levels}"; then
+  tier=v4
+elif grep -q 'x86-64-v3 (supported' <<<"${levels}"; then
+  tier=v3
+else
+  tier=''
+fi
+echo "CPU: ${vendor}, CachyOS repos: ${tier:-generic x86-64 only}"
+
+packages=(
+  base linux-cachyos linux-firmware
+  btrfs-progs limine limine-mkinitcpio-hook limine-snapper-sync efibootmgr
+  networkmanager sudo nano vim
+  cachyos-keyring cachyos-mirrorlist
+  denden-installer denden-desktop
+)
+[[ ${vendor} == AuthenticAMD ]] && packages+=(amd-ucode)
+[[ ${vendor} == GenuineIntel ]] && packages+=(intel-ucode)
+case ${tier} in
+  v3) packages+=(cachyos-v3-mirrorlist) ;;
+  v4|znver4) packages+=(cachyos-v4-mirrorlist) ;;
+esac
+
+gpus=$(lspci -nn | grep -E '\[(0300|0302|0380)\]' || true)
+echo "${gpus:-no GPU found}" | sed 's/^/GPU: /'
+if grep -q '\[10de:' <<<"${gpus}"; then
+  # The open kernel modules cover Turing (2018) and newer; older cards fall
+  # back to nouveau.
+  device=$(grep -o '\[10de:[0-9a-f]\{4\}\]' <<<"${gpus}" | head -n1 | cut -c7-10)
+  if (( 16#${device} >= 16#1e00 )); then
+    packages+=(linux-cachyos-nvidia-open nvidia-utils)
+  else
+    echo "warning: this NVIDIA GPU predates the open driver; using nouveau"
+    packages+=(mesa vulkan-nouveau)
+  fi
+fi
+grep -q '\[1002:' <<<"${gpus}" && packages+=(mesa vulkan-radeon)
+grep -q '\[8086:' <<<"${gpus}" && packages+=(mesa vulkan-intel intel-media-driver)
+[[ -n ${gpus} ]] || packages+=(mesa)
+
+# --- pacman configuration ---------------------------------------------------
+
+# The installed system's pacman.conf. [denden] points at its own copy of the
+# live image's repo; later Den Den packages are built from /src/denden.
+repos="[denden]
+SigLevel = Optional TrustAll
+Server = file:///var/lib/denden/repo
+"
+arch_line="Architecture = x86_64"
+case ${tier} in
+  v3|v4)
+    arch_line="Architecture = x86_64 x86_64_${tier}"
+    for r in cachyos-${tier} cachyos-core-${tier} cachyos-extra-${tier}; do
+      repos+="
+[${r}]
+Include = /etc/pacman.d/cachyos-${tier}-mirrorlist
+"
+    done ;;
+  znver4)
+    arch_line="Architecture = x86_64 x86_64_v4 x86_64_znver4"
+    for r in cachyos-znver4 cachyos-core-znver4 cachyos-extra-znver4; do
+      repos+="
+[${r}]
+Include = /etc/pacman.d/cachyos-v4-mirrorlist
+"
+    done ;;
+esac
+repos+="
+[cachyos]
+Include = /etc/pacman.d/cachyos-mirrorlist
+
+[core]
+Include = /etc/pacman.d/mirrorlist
+
+[extra]
+Include = /etc/pacman.d/mirrorlist
+"
+target_conf="[options]
+HoldPkg = pacman glibc
+${arch_line}
+CheckSpace
+Color
+ParallelDownloads = 5
+SigLevel = Required DatabaseOptional
+LocalFileSigLevel = Optional
+
+${repos}"
+
+# The same, for pacstrap from the live system: its repo sits in the image.
+install_conf=$(mktemp)
+sed "s|file:///var/lib/denden/repo|file://${LIVE_REPO}|" <<<"${target_conf}" > "${install_conf}"
+
+# --- Files the kernel install hooks read, before the kernel is installed ----
+
+root_uuid=$(blkid -o value -s UUID "${root}")
+mkdir -p "${TARGET}/etc/kernel" "${TARGET}/etc/default"
+echo "root=UUID=${root_uuid} rootflags=subvol=/@ rw quiet" > "${TARGET}/etc/kernel/cmdline"
+# Read by both limine-entry-tool and limine-snapper-sync ahead of their own
+# packaged configs, so it repeats the packaged defaults that matter.
+cat > "${TARGET}/etc/default/limine" <<EOF
+# Den Den: Limine boot entries (limine-entry-tool) and bootable Snapper
+# snapshots (limine-snapper-sync). Run limine-update after changing this.
+TARGET_OS_NAME="Den Den"
+ESP_PATH="/boot"
+ENABLE_LIMINE_FALLBACK=yes
+ENABLE_VERIFICATION=yes
+BOOT_ORDER="*, *fallback, Snapshots"
+ENABLE_SORT=no
+FIND_BOOTLOADERS=yes
+ENABLE_UKI=no
+
+ROOT_SUBVOLUME_PATH="/@"
+ROOT_SNAPSHOTS_PATH="/@snapshots"
+MAX_SNAPSHOT_ENTRIES=10
+LIMIT_USAGE_PERCENT=85
+EXCLUDE_SNAPSHOT_ENTRIES="Windows*, windows*"
+RESTORE_METHOD=replace
+SNAPSHOT_FORMAT_CHOICE=2
+EOF
+
+# --- Install ----------------------------------------------------------------
+
+step "Installing packages (this downloads about 2 GiB)"
+# Mirrors stall now and then; a retry downloads only what's still missing.
+for attempt in 1 2 3; do
+  pacstrap -C "${install_conf}" -K ${host_cache:+-c} "${TARGET}" "${packages[@]}" && break
+  ((attempt < 3)) || die "package installation failed three times; see ${LOG}"
+  echo "Package installation failed; retrying (${attempt}/3)..."
+  sleep 10
+done
+
+printf '%s\n' "${target_conf}" > "${TARGET}/etc/pacman.conf"
+mkdir -p "${TARGET}/var/lib/denden/repo"
+cp -a "${LIVE_REPO}/." "${TARGET}/var/lib/denden/repo/"
+cp /etc/pacman.d/mirrorlist "${TARGET}/etc/pacman.d/mirrorlist"
+
+# fstab without subvolid=, so a rolled-back @ still mounts by name.
+genfstab -U "${TARGET}" | sed -E 's/,subvolid=[0-9]+//' >> "${TARGET}/etc/fstab"
+
+step "Configuring the system"
+cat > "${TARGET}/root/denden-configure.sh" <<EOF
+set -euo pipefail
+ln -sf /usr/share/zoneinfo/${timezone} /etc/localtime
+hwclock --systohc
+sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+locale-gen
+echo LANG=en_US.UTF-8 > /etc/locale.conf
+echo KEYMAP=${keymap} > /etc/vconsole.conf
+echo ${hostname} > /etc/hostname
+printf '127.0.0.1 localhost\n::1 localhost\n127.0.1.1 ${hostname}\n' > /etc/hosts
+
+useradd -m -G wheel,docker -s /bin/bash ${user}
+passwd -l root
+install -m 0440 /dev/stdin /etc/sudoers.d/10-denden <<'SUDO'
+# Den Den: wheel runs sudo without a password until the broker (milestone 5)
+# takes over system changes. Snapshots before every pacman transaction are
+# the safety net; /etc/denden/AGENTS.md tells agents to announce sudo first.
+%wheel ALL=(ALL:ALL) NOPASSWD: ALL
+SUDO
+
+# Log in straight to the desktop; the greeter shows after logging out.
+cat > /etc/greetd/config.toml <<'GREETD'
+[terminal]
+vt = 1
+
+[default_session]
+command = "agreety --cmd niri-session"
+user = "greeter"
+
+[initial_session]
+command = "niri-session"
+user = "${user}"
+GREETD
+
+# Boot read-only snapshots with a writable overlay.
+sed -i -E 's/^(HOOKS=\(.*filesystems)(.*\))/\1 sd-btrfs-overlayfs\2/' /etc/mkinitcpio.conf
+grep -q sd-btrfs-overlayfs /etc/mkinitcpio.conf
+
+# Snapper. Root snapshots live in the separate @snapshots subvolume, so swap
+# out the nested one create-config makes.
+umount /.snapshots
+rmdir /.snapshots
+snapper --no-dbus -c root create-config /
+btrfs subvolume delete /.snapshots
+mkdir /.snapshots
+mount /.snapshots
+chmod 750 /.snapshots
+snapper --no-dbus -c home create-config /home
+snapper --no-dbus -c src create-config /src
+# Root: pre/post pairs from snap-pac only. Home and /src: hourly, 2 days back.
+snapper --no-dbus -c root set-config TIMELINE_CREATE=no NUMBER_LIMIT=20 NUMBER_LIMIT_IMPORTANT=10
+for c in home src; do
+  snapper --no-dbus -c \$c set-config TIMELINE_CREATE=yes ALLOW_USERS=${user} \
+    TIMELINE_LIMIT_HOURLY=48 TIMELINE_LIMIT_DAILY=7 TIMELINE_LIMIT_WEEKLY=4 \
+    TIMELINE_LIMIT_MONTHLY=0 TIMELINE_LIMIT_YEARLY=0
+done
+
+chown ${user}: /src
+sudo -u ${user} git clone --quiet ${DENDEN_GIT} /src/denden \
+  || echo "warning: couldn't clone ${DENDEN_GIT} to /src/denden; clone it later"
+
+systemctl enable NetworkManager greetd docker fstrim.timer systemd-timesyncd \
+  snapper-timeline.timer snapper-cleanup.timer limine-snapper-sync.service
+
+limine-install
+limine-update
+EOF
+arch-chroot "${TARGET}" bash /root/denden-configure.sh
+rm "${TARGET}/root/denden-configure.sh"
+printf '%s:%s\n' "${user}" "${password}" | arch-chroot "${TARGET}" chpasswd
+
+cp "${LOG}" "${TARGET}/var/log/denden-install.log"
+sync
+umount -R "${TARGET}"
+
+step "Done"
+cat <<EOF
+Den Den is installed on ${disk}. Remove the USB stick and reboot.
+
+You'll be logged in to T3 Code. Mod (the Windows key) + Shift + / lists the
+key bindings. To add Windows or other systems to the boot menu, run
+'sudo limine-scan' once you're in.
+EOF

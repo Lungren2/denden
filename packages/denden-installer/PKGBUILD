@@ -1,0 +1,23 @@
+# Maintainer: Ethan <ethanogle012@outlook.com>
+#
+# denden-install: installs Den Den from the live image onto a disk (whole
+# disk, or the free space beside existing partitions). Also installed on the
+# system it creates, so the same script can set up another disk later.
+
+pkgname=denden-installer
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Den Den installer'
+arch=('any')
+url='https://github.com/Lungren2/denden'
+license=('MIT')
+depends=(
+  'arch-install-scripts' 'bash' 'btrfs-progs' 'curl' 'dosfstools' 'gptfdisk'
+  'parted' 'pciutils' 'util-linux'
+)
+source=('denden-install')
+sha256sums=('cdbcbb29495dbef40963e264455a553285b84f58b4354f1c67afd023373358e6')
+
+package() {
+  install -Dm755 denden-install "${pkgdir}/usr/bin/denden-install"
+}
