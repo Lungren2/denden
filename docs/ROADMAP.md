@@ -26,7 +26,7 @@ Each item lands as its own commit against the vanilla baseline.
   `devtools`, snapper, snap-pac, bubblewrap
 - [x] `/etc/denden/AGENTS.md`, loaded by Claude Code (`/etc/claude-code/CLAUDE.md`)
   and Codex (`~/.codex/AGENTS.md` via `/etc/skel`)
-- [ ] `t3code-desktop`: the T3 Code desktop app built from source against
+- [x] `t3code-desktop`: the T3 Code desktop app built from source against
   Arch's Electron 44
 - [ ] `denden-desktop`: a Niri session that logs in automatically to T3 Code
   full screen; PipeWire; NVIDIA (`linux-cachyos-nvidia-open`); Godot, Blender
