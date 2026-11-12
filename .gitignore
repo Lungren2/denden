@@ -3,6 +3,7 @@
 /out/
 *.iso
 build.log
+pkg-build.log
 
 # Local package repo and makepkg leftovers
 /repo/
