@@ -1,0 +1,114 @@
+# Maintainer: Ethan <ethanogle012@outlook.com>
+#
+# The headless `t3` command, built from source: runs T3 Code as a server
+# (`t3 serve`, `t3 up`) that you open from a browser, so it works without a
+# desktop. Mirrors the upstream release workflow's Linux CLI archive job
+# (.github/workflows/release-desktop.yml). t3code-cli-bin repackages the
+# prebuilt release instead.
+#
+# Differences from the official release: telemetry reports the "dev"
+# channel; the T3 Connect relay config baked into official builds is absent,
+# so remote access goes through `t3 up` with Tailscale or --lan; and the
+# executable embeds the system's Node instead of upstream's pinned release.
+
+pkgname=t3code-cli
+pkgver=0.1.9
+pkgrel=1
+pkgdesc='T3 Code control plane for coding agents (headless server and CLI)'
+arch=('x86_64')
+url='https://github.com/pingdotgg/t3code'
+license=('MIT')
+# The executable is a copy of the system's node, so it links the same shared
+# libraries and needs a rebuild when one of them bumps its soname.
+depends=(
+  'abseil-cpp' 'ada' 'brotli' 'c-ares' 'glibc' 'icu' 'libffi' 'libgcc'
+  'libnghttp2' 'libstdc++' 'libuv' 'openssl' 'simdjson' 'zlib' 'zstd'
+)
+makedepends=('nodejs>=26' 'pnpm' 'rust' 'python' 'git')
+optdepends=(
+  'claude-code: Claude Code provider'
+  'openai-codex: Codex provider'
+  'git: project and worktree management'
+  'tailscale: remote access with t3 up --tailscale-serve'
+)
+provides=('t3')
+conflicts=('t3code-cli-bin')
+# The single executable embeds the Node runtime; stripping corrupts it.
+options=('!strip' '!debug')
+source=(
+  "t3code-${pkgver}.tar.gz::https://github.com/pingdotgg/t3code/archive/refs/tags/v${pkgver}.tar.gz"
+  'skip-libatomic-bundle.patch'
+)
+sha256sums=(
+  '0508e785d016f5733f36ea602a545ca16dde8addf3838d127d48c029f2427628'
+  '40bf267d93cb916cb18fb6429dd14a05fdc9adea898b34dc8ca58f95fc118160'
+)
+
+prepare() {
+  cd "t3code-${pkgver}"
+  patch -Np1 -i "${srcdir}/skip-libatomic-bundle.patch"
+
+  # pnpm's prepare step (`vp config`) installs git hooks into whatever repo
+  # it finds; stop git from finding one above the source tree.
+  export GIT_CEILING_DIRECTORIES="${srcdir}"
+  # Only the server, web client and build scripts are needed; skip the
+  # Electron and Playwright browser downloads the desktop app pulls in.
+  export ELECTRON_SKIP_BINARY_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+  # The single executable embeds the Node that builds it, and upstream pins
+  # that to one exact release (root package.json engines.node). Embed the
+  # system's Node, which Arch builds from source, instead of a downloaded
+  # binary: point the pin at it.
+  node -e '
+    const fs = require("fs");
+    const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+    pkg.engines.node = process.versions.node;
+    fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+  '
+  pnpm install --frozen-lockfile
+}
+
+build() {
+  cd "t3code-${pkgver}"
+  export GIT_CEILING_DIRECTORIES="${srcdir}"
+  # The installed web client doesn't need source maps; skipping them keeps
+  # the package and the build smaller.
+  export T3CODE_WEB_SOURCEMAP=0
+  # Upstream CI installs the Vite+ CLI (`vp`) globally, and the build scripts
+  # spawn it by name; use the workspace's copy instead.
+  export PATH="${PWD}/node_modules/.bin:${PATH}"
+  node scripts/update-release-package-versions.ts "${pkgver}"
+  vp run --filter t3 build
+  node scripts/apply-web-brand-assets.ts production apps/server/dist/client
+
+  cargo build --locked --release --manifest-path native/resource-monitor/Cargo.toml
+  install -Dm755 native/resource-monitor/target/release/t3-resource-monitor \
+    "${srcdir}/resource-monitor/linux-x64/t3-resource-monitor"
+
+  node apps/server/scripts/cli.ts build-exe --verbose
+  # The upstream archive bundles Ubuntu's libatomic; this package links the
+  # system's libraries instead (see skip-libatomic-bundle.patch).
+  export T3CODE_BUNDLE_LIBATOMIC=0
+  rm -rf -- "${srcdir}/release-cli"
+  node scripts/build-cli-archive.ts \
+    --platform linux --arch x64 --version "${pkgver}" \
+    --resource-monitor-dir "${srcdir}/resource-monitor" \
+    --output-dir "${srcdir}/release-cli"
+}
+
+package() {
+  install -d "${pkgdir}/opt/${pkgname}"
+  bsdtar -xf "${srcdir}/release-cli/t3-${pkgver}-linux-x64.tar.gz" \
+    --strip-components 1 -C "${pkgdir}/opt/${pkgname}"
+  chmod -R u=rwX,go=rX "${pkgdir}/opt/${pkgname}"
+
+  # A wrapper rather than a symlink, so the binary always finds its bundled
+  # client, node_modules and lib/ next to itself.
+  install -Dm755 /dev/stdin "${pkgdir}/usr/bin/t3" <<'EOF'
+#!/bin/sh
+exec /opt/t3code-cli/t3 "$@"
+EOF
+
+  install -Dm644 "${srcdir}/t3code-${pkgver}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

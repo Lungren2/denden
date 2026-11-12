@@ -17,7 +17,7 @@ Each item lands as its own commit against the vanilla baseline.
 - [x] CachyOS repo and `linux-cachyos` kernel in the live image (generic x86-64)
 - [x] `packages/` PKGBUILDs built into a local repo the ISO installs from
 - [x] T3 Code (`t3code-cli`) in the image
-- [ ] `t3code-cli` built from source (prebuilt kept as `t3code-cli-bin`)
+- [x] `t3code-cli` built from source (prebuilt kept as `t3code-cli-bin`)
 - [ ] Toolchain for local builds in the image: `base-devel`, `devtools` (`pkgctl`), `git`
 - [ ] `bubblewrap`, `snapper` in the image
 - [ ] Installer that lays the system out on Btrfs and picks CachyOS v3/v4/znver4 repos per CPU

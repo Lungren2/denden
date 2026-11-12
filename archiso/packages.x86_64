@@ -107,7 +107,7 @@ squashfs-tools
 sudo
 syslinux
 systemd-resolvconf
-t3code-cli-bin
+t3code-cli
 tcpdump
 terminus-font
 testdisk

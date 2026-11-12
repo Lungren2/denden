@@ -1,0 +1,13 @@
+--- a/scripts/build-cli-archive.ts
++++ b/scripts/build-cli-archive.ts
+@@ -645,7 +645,9 @@
+   });
+ 
+   const executablePath = path.join(contentDir, executableName);
+-  if (input.platform === "linux") {
++  // Distro packages use the system's libatomic (Arch's Node doesn't link it at
++  // all); only the self-contained upstream release needs to carry a copy.
++  if (input.platform === "linux" && process.env.T3CODE_BUNDLE_LIBATOMIC !== "0") {
+     yield* bundleLinuxLibatomic({ repoRoot, contentDir, executablePath });
+   }
+   // TEMPORARY one-time Node fix. Remove when fixed: https://github.com/nodejs/node/issues/67048
