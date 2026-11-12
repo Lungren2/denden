@@ -18,10 +18,27 @@ Each item lands as its own commit against the vanilla baseline.
 - [x] `packages/` PKGBUILDs built into a local repo the ISO installs from
 - [x] T3 Code (`t3code-cli`) in the image
 - [x] `t3code-cli` built from source (prebuilt kept as `t3code-cli-bin`)
-- [ ] Toolchain for local builds in the image: `base-devel`, `devtools` (`pkgctl`), `git`
-- [ ] `bubblewrap`, `snapper` in the image
-- [ ] Installer that lays the system out on Btrfs and picks CachyOS v3/v4/znver4 repos per CPU
-- [ ] `/etc/denden/AGENTS.md`: the system contract agents load
+- [x] Codex (`openai-codex`, built from source by Arch) and Claude Code
+  (`claude-code` from CachyOS: the vendor binary, since its source isn't
+  public) in the live image
+- [x] `denden-base`: the agents, toolchains (Node/npm/pnpm, Bun, Rust,
+  Python/uv, .NET), Docker Engine with Compose and Buildx, `base-devel`,
+  `devtools`, snapper, snap-pac, bubblewrap
+- [x] `/etc/denden/AGENTS.md`, loaded by Claude Code (`/etc/claude-code/CLAUDE.md`)
+  and Codex (`~/.codex/AGENTS.md` via `/etc/skel`)
+- [ ] `t3code-desktop`: the T3 Code desktop app built from source against
+  Arch's Electron 44
+- [ ] `denden-desktop`: a Niri session that logs in automatically to T3 Code
+  full screen; PipeWire; NVIDIA (`linux-cachyos-nvidia-open`); Godot, Blender
+- [ ] `denden-install`: Btrfs subvolumes (`@`, `@home`, `@src`, `@snapshots`,
+  `@log`, `@pkg`, `@docker`), Limine with bootable snapshots, snap-pac, hourly
+  snapshots of `/home` and `/src`, CachyOS v3/v4/znver4 repos per CPU, this
+  repo cloned to `/src/denden`
+- [ ] Installer tested in QEMU, then on hardware
+
+Until the broker (milestone 5), agents run as the user, who has passwordless
+sudo. Snapshots before every pacman transaction are the safety net, and
+`AGENTS.md` requires agents to say what they will run before using `sudo`.
 
 ## 2. Local source
 - [ ] `/src` tree; this repo at `/src/denden`
