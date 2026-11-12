@@ -10,8 +10,8 @@ Each item lands as its own commit against the vanilla baseline.
 ## 0. Baseline
 - [x] Import vanilla `releng` profile (archiso v92)
 - [x] Stock ISO builds in Arch WSL and is flashed to USB
-- [ ] Stock ISO boots on real hardware
-- [ ] Pick a name; set `iso_name`, `iso_label`, `iso_publisher`, `iso_application`
+- [x] Den Den ISO (linux-cachyos, t3code-cli) boots on real hardware
+- [x] Pick a name (Den Den); set `iso_name`, `iso_label`, `iso_publisher`, `iso_application`
 
 ## 1. Agent-ready base
 - [x] CachyOS repo and `linux-cachyos` kernel in the live image (generic x86-64)
