@@ -28,13 +28,16 @@ Each item lands as its own commit against the vanilla baseline.
   and Codex (`~/.codex/AGENTS.md` via `/etc/skel`)
 - [x] `t3code-desktop`: the T3 Code desktop app built from source against
   Arch's Electron 44
-- [ ] `denden-desktop`: a Niri session that logs in automatically to T3 Code
+- [x] `denden-desktop`: a Niri session that logs in automatically to T3 Code
   full screen; PipeWire; NVIDIA (`linux-cachyos-nvidia-open`); Godot, Blender
-- [ ] `denden-install`: Btrfs subvolumes (`@`, `@home`, `@src`, `@snapshots`,
+- [x] `denden-install`: Btrfs subvolumes (`@`, `@home`, `@src`, `@snapshots`,
   `@log`, `@pkg`, `@docker`), Limine with bootable snapshots, snap-pac, hourly
   snapshots of `/home` and `/src`, CachyOS v3/v4/znver4 repos per CPU, this
   repo cloned to `/src/denden`
-- [ ] Installer tested in QEMU, then on hardware
+- [x] Installer tested in a VM (`scripts/test-install.sh`): whole-disk install,
+  boot, autologin into Niri with T3 Code; the session checked nested in WSLg
+- [ ] Installed on real hardware: free-space install beside Windows, NVIDIA,
+  the session on screen
 
 Until the broker (milestone 5), agents run as the user, who has passwordless
 sudo. Snapshots before every pacman transaction are the safety net, and

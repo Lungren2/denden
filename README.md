@@ -16,9 +16,10 @@ is built with [archiso](https://gitlab.archlinux.org/archlinux/archiso).
 | `archiso/airootfs/` | Files overlaid onto the image's root filesystem. |
 | `archiso/profiledef.sh` | ISO name, boot modes, compression, file permissions. |
 | `archiso/pacman.conf` | Repos the image is built from: local `denden`, `cachyos`, then Arch. |
-| `packages/` | PKGBUILDs for this distro's own packages (e.g. `t3code-cli`). |
+| `packages/` | PKGBUILDs for this distro's own packages: T3 Code, the `denden-base` and `denden-desktop` meta packages, the installer. |
 | `scripts/setup-build-host.sh` | One-time setup of an Arch build host. |
 | `scripts/build.sh` | Builds `packages/` into a local repo, then the ISO into `out/`. |
+| `scripts/test-install.sh` | Installs the newest ISO onto a virtual disk in a VM, then boots it. |
 | `docs/agent-environment.md` | Design of the agent environment: the reason this distro exists. |
 | `docs/ROADMAP.md` | Milestones, in build order. |
 
@@ -59,8 +60,15 @@ Test the result without real hardware:
 
 ```sh
 sudo pacman -S --needed qemu-desktop edk2-ovmf
-run_archiso -u -i out/*.iso
+run_archiso -u -i out/*.iso          # boot the live image
+sudo pacman -S --needed qemu-base qemu-hw-display-virtio-vga edk2-ovmf socat
+./scripts/test-install.sh            # install to a virtual disk, then boot it
 ```
+
+`test-install.sh` runs `denden-install` unattended in a KVM VM against a blank
+virtual disk, boots the result and saves a screenshot. A VM without a GPU can't
+show the Niri session (niri won't render in software), so check the session
+in the guest's journal; the script shuts the VM down cleanly for that.
 
 ## Flashing
 
@@ -77,6 +85,24 @@ pwsh -ExecutionPolicy Bypass -File .\scripts\flash.ps1 -IsoPath <iso> -DiskNumbe
 ```
 
 Rufus (DD mode) or balenaEtcher work too.
+
+## Installing
+
+Boot the USB stick in UEFI mode (Den Den doesn't support BIOS boot), connect to
+the internet and run:
+
+```sh
+denden-install
+```
+
+It asks for a disk and whether to erase it or install into its largest free
+space, keeping the partitions already there (e.g. beside Windows). Then it asks
+for a hostname, user and time zone, and confirms before touching anything.
+It creates a 4 GiB boot partition and a Btrfs partition with the subvolumes
+`@`, `@home`, `@src`, `@snapshots`, `@log`, `@pkg` and `@docker`, installs
+`denden-desktop` plus drivers for the GPU it finds, and boots with Limine.
+Root snapshots are taken around every pacman transaction and appear in the
+boot menu. After installing, `sudo limine-scan` adds Windows to that menu.
 
 ## License
 
