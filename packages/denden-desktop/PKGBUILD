@@ -36,7 +36,7 @@ source=(
   '50-niri-limit-free-buffer-pool.json'
 )
 sha256sums=(
-  'cf6f238a0c1362e748f4372dc7af8a10176c92574df078c60fd3a2d0d9a05b17'
+  'bb5e3b19fa0594c8e93251bca202c3f0a5bc014f53eccb6dac6e4aea077729df'
   '1a04a9eb0e51c8eba4f06373c9e514012417f01295d4938ed0635932fb24cd47'
 )
 

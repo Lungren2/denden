@@ -15,6 +15,15 @@ input {
         natural-scroll
     }
     focus-follows-mouse max-scroll-amount="0%"
+    // Leave the power button to logind, which powers off (niri would suspend).
+    disable-power-key-handling
+}
+
+// greetd starts this session from a console login, so apps would otherwise
+// see XDG_SESSION_TYPE=tty and Electron apps (T3 Code among them) would open
+// through X11 instead of natively.
+environment {
+    XDG_SESSION_TYPE "wayland"
 }
 
 prefer-no-csd
@@ -41,7 +50,7 @@ spawn-at-startup "mako"
 spawn-at-startup "t3code"
 
 window-rule {
-    match app-id="^t3code$"
+    match app-id="^com\\.t3tools\\.T3Code$"
     open-maximized true
 }
 
