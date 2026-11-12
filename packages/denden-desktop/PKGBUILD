@@ -1,0 +1,51 @@
+# Maintainer: Ethan <ethanogle012@outlook.com>
+#
+# The Den Den desktop: a Niri session where T3 Code is the desktop. At login
+# T3 Code opens maximized with no bar or wallpaper; other windows open as
+# columns beside it. The installer enables greetd and logs the user in
+# straight into this session.
+#
+# GPU drivers aren't listed here: the installer adds them for the hardware it
+# finds.
+
+pkgname=denden-desktop
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Den Den desktop: a Niri session with T3 Code as the desktop'
+arch=('any')
+url='https://github.com/Lungren2/denden'
+license=('MIT')
+depends=(
+  'denden-base' 't3code-desktop'
+  # Session
+  'niri' 'xwayland-satellite' 'greetd'
+  'xdg-desktop-portal-gnome' 'xdg-desktop-portal-gtk'
+  # What the session's key bindings open, notifications, and the Secret
+  # Service T3 Code keeps credentials in
+  'foot' 'fuzzel' 'mako' 'gnome-keyring'
+  # Audio, and the microphone T3 Code's voice input uses
+  'pipewire' 'pipewire-pulse' 'pipewire-alsa' 'wireplumber'
+  # Sign-ins that agents and CLIs open in a browser
+  'firefox'
+  'noto-fonts' 'noto-fonts-emoji'
+  # Tools the user's projects need
+  'godot' 'blender'
+)
+source=(
+  'config.kdl'
+  '50-niri-limit-free-buffer-pool.json'
+)
+sha256sums=(
+  'cf6f238a0c1362e748f4372dc7af8a10176c92574df078c60fd3a2d0d9a05b17'
+  '1a04a9eb0e51c8eba4f06373c9e514012417f01295d4938ed0635932fb24cd47'
+)
+
+package() {
+  # Niri's system-wide config; a user's ~/.config/niri/config.kdl replaces it.
+  install -Dm644 config.kdl "${pkgdir}/etc/niri/config.kdl"
+
+  # On NVIDIA, stop the driver from holding on to freed buffers in niri,
+  # which otherwise grows its VRAM use to gigabytes. Inert on other GPUs.
+  install -Dm644 50-niri-limit-free-buffer-pool.json \
+    "${pkgdir}/etc/nvidia/nvidia-application-profiles-rc.d/50-niri-limit-free-buffer-pool.json"
+}
