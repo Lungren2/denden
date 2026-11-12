@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=T3 Code
+Comment=Desktop GUI for coding agents
+Exec=t3code %U
+Icon=t3code
+Type=Application
+Terminal=false
+Categories=Development;
+MimeType=x-scheme-handler/t3code;x-scheme-handler/t3code-dev;
+StartupWMClass=t3code

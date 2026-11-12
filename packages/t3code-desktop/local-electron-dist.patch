@@ -1,0 +1,17 @@
+--- a/scripts/build-desktop-artifact.ts
++++ b/scripts/build-desktop-artifact.ts
+@@ -2900,6 +2900,14 @@
+     };
+   }
+ 
++  // Distribution packages can supply an Electron they built from source in
++  // place of the prebuilt binary electron-builder downloads.
++  const electronDist = process.env.T3CODE_ELECTRON_DIST;
++  if (electronDist) {
++    buildConfig.electronDist = electronDist;
++    buildConfig.electronVersion = process.env.T3CODE_ELECTRON_VERSION;
++  }
++
+   if (platform === "linux") {
+     // Pin the static AppImage runtime so hosts with only FUSE 3 do not need libfuse2.
+     buildConfig.toolsets = { appimage: "1.0.3" };

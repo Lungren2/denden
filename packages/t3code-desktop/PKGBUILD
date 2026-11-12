@@ -1,0 +1,126 @@
+# Maintainer: Ethan <ethanogle012@outlook.com>
+#
+# The T3 Code desktop app, built from source. Runs upstream's own release
+# packaging (scripts/build-desktop-artifact.ts) for an unpacked Linux app, but
+# with Arch's Electron, built from source, in place of the prebuilt Electron
+# electron-builder downloads (see local-electron-dist.patch).
+#
+# The app ships its own copy of that Electron rather than running
+# /usr/bin/electron44, because it finds its bundled helpers (resource monitor,
+# screen capture, browser secret) next to its executable. So rebuild this
+# package when electron44 updates.
+#
+# Same differences from the official release as t3code-cli: "dev" telemetry
+# channel and no T3 Connect relay config. Its updater is inactive: upstream
+# only self-updates AppImage and .deb installs.
+
+pkgname=t3code-desktop
+pkgver=0.1.9
+pkgrel=1
+_electron=electron44
+pkgdesc='T3 Code desktop app for coding agents'
+arch=('x86_64')
+url='https://github.com/pingdotgg/t3code'
+license=('MIT')
+# Electron's runtime libraries (as electron44 depends on them), plus the
+# Secret Service client the app stores credentials with and the Vulkan loader
+# its GPU voice transcription uses.
+depends=(
+  'alsa-lib' 'brotli' 'c-ares' 'flac' 'fontconfig' 'freetype2' 'glibc' 'gtk3'
+  'harfbuzz' 'libdrm' 'libevent' 'libffi' 'libgcc' 'libjpeg-turbo' 'libpulse'
+  'libsecret' 'libxml2' 'libxslt' 'minizip' 'nss' 'opus' 'vulkan-icd-loader'
+  'xdg-utils' 'zlib'
+)
+makedepends=('nodejs>=26' 'pnpm' 'rust' 'python' 'git' 'imagemagick' "${_electron}")
+optdepends=(
+  'claude-code: Claude Code provider'
+  'openai-codex: Codex provider'
+  'git: project and worktree management'
+)
+provides=('t3code')
+conflicts=('t3code' 't3code-bin')
+# Ship the Electron copy (already stripped by electron44) and the bundled
+# native modules exactly as built.
+options=('!strip' '!debug')
+source=(
+  "t3code-${pkgver}.tar.gz::https://github.com/pingdotgg/t3code/archive/refs/tags/v${pkgver}.tar.gz"
+  'local-electron-dist.patch'
+  't3code.desktop'
+)
+sha256sums=(
+  '0508e785d016f5733f36ea602a545ca16dde8addf3838d127d48c029f2427628'
+  '6f7110b57059fc2958eb5413b73b28de5c2d2ccfd54c89c48a74ee583f232357'
+  'cde89f4108999df3b73be19fb0a863e806d399032bb86d01341d09d8a708b6dd'
+)
+
+prepare() {
+  cd "t3code-${pkgver}"
+  patch -Np1 -i "${srcdir}/local-electron-dist.patch"
+
+  # pnpm's prepare step (`vp config`) installs git hooks into whatever repo
+  # it finds; stop git from finding one above the source tree.
+  export GIT_CEILING_DIRECTORIES="${srcdir}"
+  # Electron comes from the system; Playwright drives the user's browsers.
+  export ELECTRON_SKIP_BINARY_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+  # Upstream pins one exact Node release (root package.json engines.node);
+  # build with the system's, which Arch builds from source.
+  node -e '
+    const fs = require("fs");
+    const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+    pkg.engines.node = process.versions.node;
+    fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+  '
+  pnpm install --frozen-lockfile
+}
+
+build() {
+  cd "t3code-${pkgver}"
+  export GIT_CEILING_DIRECTORIES="${srcdir}"
+  export ELECTRON_SKIP_BINARY_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+  export T3CODE_WEB_SOURCEMAP=0
+  # The build scripts spawn the Vite+ CLI (`vp`) by name; use the workspace's.
+  export PATH="${PWD}/node_modules/.bin:${PATH}"
+
+  export T3CODE_ELECTRON_DIST="/usr/lib/${_electron}"
+  T3CODE_ELECTRON_VERSION="$(<"/usr/lib/${_electron}/version")"
+  export T3CODE_ELECTRON_VERSION
+
+  node scripts/update-release-package-versions.ts "${pkgver}"
+  rm -rf -- "${srcdir}/release-desktop"
+  node scripts/build-desktop-artifact.ts \
+    --platform linux --target dir --arch x64 --build-version "${pkgver}" \
+    --output-dir "${srcdir}/release-desktop" --verbose
+
+  # The unpacked app carries no icons; render the hicolor sizes from the
+  # 1024px artwork upstream uses for its Linux packages.
+  local size
+  rm -rf -- "${srcdir}/icons"
+  for size in 16 32 48 64 128 256 512 1024; do
+    install -d "${srcdir}/icons/${size}x${size}/apps"
+    magick assets/prod/black-universal-1024.png -resize "${size}x${size}" \
+      "${srcdir}/icons/${size}x${size}/apps/t3code.png"
+  done
+}
+
+package() {
+  local app="${pkgdir}/opt/${pkgname}"
+  install -d "${app}"
+  cp -a --no-preserve=ownership "${srcdir}/release-desktop/linux-unpacked/." "${app}/"
+  chmod -R u=rwX,go=rX "${app}"
+  # Chromium's setuid sandbox helper, as in electron44.
+  chmod 4755 "${app}/chrome-sandbox"
+
+  install -d "${pkgdir}/usr/bin"
+  ln -s "/opt/${pkgname}/t3code" "${pkgdir}/usr/bin/t3code"
+
+  install -Dm644 "${srcdir}/t3code.desktop" \
+    "${pkgdir}/usr/share/applications/t3code.desktop"
+  install -d "${pkgdir}/usr/share/icons/hicolor"
+  cp -r --no-preserve=mode,ownership "${srcdir}/icons/." "${pkgdir}/usr/share/icons/hicolor/"
+  install -Dm644 "${srcdir}/t3code-${pkgver}/apps/desktop/resources/linux/com.t3tools.t3code.metainfo.xml" \
+    "${pkgdir}/usr/share/metainfo/com.t3tools.t3code.metainfo.xml"
+
+  install -Dm644 "${srcdir}/t3code-${pkgver}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
