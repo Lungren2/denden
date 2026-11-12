@@ -1,0 +1,41 @@
+# Maintainer: Ethan <ethanogle012@outlook.com>
+#
+# What an installed Den Den system adds on top of `base`: the agents, the
+# toolchains the user's projects need, snapshots, and the system contract
+# agents load (/etc/denden/AGENTS.md).
+
+pkgname=denden-base
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Den Den base system: agents, toolchains, snapshots and the agent contract'
+arch=('any')
+url='https://github.com/Lungren2/denden'
+license=('MIT')
+depends=(
+  # Agents
+  't3code-cli' 'claude-code' 'openai-codex'
+  # Building any package on the system from source
+  'base-devel' 'devtools' 'git' 'github-cli' 'expac'
+  # Toolchains
+  'nodejs' 'npm' 'pnpm' 'bun' 'rust' 'python' 'uv' 'dotnet-sdk'
+  # Containers
+  'docker' 'docker-compose' 'docker-buildx'
+  # Snapshots and sandboxing
+  'btrfs-progs' 'snapper' 'snap-pac' 'bubblewrap'
+  # Tools agents reach for
+  'ripgrep' 'fd' 'jq' 'openssh' 'man-db' 'less'
+)
+source=('AGENTS.md')
+sha256sums=('9491066d3583c50e62fb548b43ff349855c975213db974709f984c19dbb0899d')
+
+package() {
+  install -Dm644 AGENTS.md "${pkgdir}/etc/denden/AGENTS.md"
+
+  # Claude Code loads this file as managed instructions in every session.
+  install -d "${pkgdir}/etc/claude-code"
+  ln -s ../denden/AGENTS.md "${pkgdir}/etc/claude-code/CLAUDE.md"
+
+  # Codex reads ~/.codex/AGENTS.md, so every new user gets it linked.
+  install -d "${pkgdir}/etc/skel/.codex"
+  ln -s /etc/denden/AGENTS.md "${pkgdir}/etc/skel/.codex/AGENTS.md"
+}
