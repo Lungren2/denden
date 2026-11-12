@@ -32,8 +32,17 @@ for pkgbuild in "${repo_root}"/packages/*/PKGBUILD; do
     continue
   fi
   echo "==> Building $(basename -- "${pkg_dir}")"
-  (cd -- "${pkg_dir}" && makepkg --syncdeps --clean --cleanbuild --noconfirm)
-  repo-add --remove "${repo_db}" "${pkg_files[@]}"
+  # Packages that compile nothing (meta packages, repackaged binaries) skip
+  # dependency checks, so building them doesn't install their whole runtime
+  # closure on the build host, nor need [denden]/[cachyos] configured there.
+  dep_flag=--syncdeps
+  grep -qE '^(prepare|build)\(\)' "${pkgbuild}" || dep_flag=--nodeps
+  (cd -- "${pkg_dir}" && makepkg "${dep_flag}" --clean --cleanbuild --noconfirm)
+  # --packagelist includes a -debug package even when makepkg ends up with
+  # nothing to put in it, so add only what was actually built.
+  built=()
+  for file in "${pkg_files[@]}"; do if [[ -f ${file} ]]; then built+=("${file}"); fi; done
+  repo-add --remove "${repo_db}" "${built[@]}"
 done
 
 # Create an empty database if there were no packages, so pacman can still sync.
