@@ -11,6 +11,7 @@ brltty
 btrfs-progs
 cachyos-keyring
 cachyos-mirrorlist
+claude-code
 clonezilla
 cloud-init
 cryptsetup
@@ -81,6 +82,7 @@ ntfsprogs
 nvme-cli
 open-iscsi
 open-vm-tools
+openai-codex
 openconnect
 openpgp-card-tools
 openssh
