@@ -11,7 +11,7 @@ profiles, recovery) serves that.
    audits it.
 2. **Structured first, pixels last.** Prefer the narrowest interface that can
    do the job:
-   `ethan` API → app-specific API → shell → accessibility → visual computer use.
+   `den` API → app-specific API → shell → accessibility → visual computer use.
 3. **A small, predictable world.** An agent sees a consistent layout and a
    short system contract, and descends into raw Linux only when it needs to
    (and is allowed to).
@@ -33,18 +33,18 @@ those channels instead of inventing a new one:
 
 | Channel | What the OS provides |
 | --- | --- |
-| Instructions | `/etc/ethan/AGENTS.md`: the system contract, loaded into every session |
-| Tools | `ethan` MCP server: the same operations as the CLI, typed |
-| Shell | `ethan` CLI with `--json` on every command |
+| Instructions | `/etc/denden/AGENTS.md`: the system contract, loaded into every session |
+| Tools | `den` MCP server: the same operations as the CLI, typed |
+| Shell | `den` CLI with `--json` on every command |
 | Files | A fixed session layout (below) |
 
 ## Architecture
 
 ```
 agents (Claude Code, Codex, …)  ← supervised from T3 Code / terminal
-        │  MCP · `ethan` CLI · AGENTS.md
+        │  MCP · `den` CLI · AGENTS.md
         ▼
-ethand  (system daemon, Varlink socket)
+dend  (system daemon, Varlink socket)
   ├─ broker    capability grants per session, polkit policy, audit
   ├─ sessions  sandbox + workspace snapshot + cgroup slice
   ├─ history   append-only event log (SQLite)
@@ -66,14 +66,14 @@ result.
 | Workspace | Btrfs snapshot of the project (or a git worktree), so discard is free |
 | Sandbox | bubblewrap inside a transient systemd scope (resource limits, killed with the session) |
 | Network | Allowed by default for package registries and model APIs; per-session policy later |
-| Secrets | Brokered: API keys are injected per-session by `ethand`, never written to disk in the sandbox |
+| Secrets | Brokered: API keys are injected per-session by `dend`, never written to disk in the sandbox |
 | Privilege | None. System changes are requests to the broker, recorded against the session |
 
 Inside a session the agent sees:
 
 ```
 /workspace   the project, writable (snapshot)
-/system      ethan API socket; the computer it may ask to change
+/system      den API socket; the computer it may ask to change
 /history     read-only event log
 /memory      persistent notes and skills across sessions
 /secrets     brokered credentials (tmpfs)
@@ -109,17 +109,17 @@ the first time anyone touches it, then kept:
 
 **Layout.** `/src/<pkgbase>/` is a git repo holding the recipe plus the
 unpacked upstream source. The pristine upstream is the first commit, so local
-changes are ordinary git commits. This repo lives at `/src/archdev`, so the OS
+changes are ordinary git commits. This repo lives at `/src/denden`, so the OS
 is edited and rebuilt from itself. Agent sessions get `/src` mounted.
 
 **Workflow.**
 
 ```
-ethan src get <pkg>      fetch recipe + upstream source at the installed version
-ethan src build <pkg>    build in a sandbox → local overlay repo → install
-ethan src diff <pkg>     local changes vs. upstream
-ethan src rebase <pkg>   carry local changes onto a new upstream version
-ethan src drop <pkg>     return to the distro's build
+den src get <pkg>      fetch recipe + upstream source at the installed version
+den src build <pkg>    build in a sandbox → local overlay repo → install
+den src diff <pkg>     local changes vs. upstream
+den src rebase <pkg>   carry local changes onto a new upstream version
+den src drop <pkg>     return to the distro's build
 ```
 
 Builds land in a `[local]` overlay repo ranked above every other repo, so a
@@ -128,18 +128,18 @@ of a package you've modified, the update rebases your commits and rebuilds. If
 the rebase conflicts, it opens an agent session to resolve it, which you
 review like any other session.
 
-## The `ethan` contract (first cut)
+## The `den` contract (first cut)
 
 Read-only operations come first. Mutations are added only once they go
 through the broker.
 
 ```
-ethan machine inspect              hardware, kernel, firmware, health
-ethan package query|install|remove
-ethan service status|enable|disable
-ethan snapshot list|create|rollback
-ethan history query "<text>" [--since 3d]
-ethan session create|list|review|commit|discard
+den machine inspect              hardware, kernel, firmware, health
+den package query|install|remove
+den service status|enable|disable
+den snapshot list|create|rollback
+den history query "<text>" [--since 3d]
+den session create|list|review|commit|discard
 ```
 
 Every command takes `--json`, and the MCP server exposes the same schema as
@@ -157,10 +157,10 @@ tools.
 ## Milestones
 
 1. **Agent-ready base:** agent tooling and the dev toolchain in the image, a
-   Btrfs-on-install layout, and `/etc/ethan/AGENTS.md`.
-2. **Local source:** `/src`, `ethan src get|build|diff|rebase|drop`, the
+   Btrfs-on-install layout, and `/etc/denden/AGENTS.md`.
+2. **Local source:** `/src`, `den src get|build|diff|rebase|drop`, the
    `[local]` overlay repo, and rebase-on-update.
-3. **Read-only contract:** `ethand` + `ethan` CLI + MCP server for `machine`,
+3. **Read-only contract:** `dend` + `den` CLI + MCP server for `machine`,
    `package query`, `service status`, `history query`.
 4. **Sessions:** sandboxed agent sessions with workspace snapshots and
    review/commit/discard.

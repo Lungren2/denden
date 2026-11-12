@@ -35,7 +35,7 @@ fi
 # to the user who invoked sudo.
 if [[ -n ${SUDO_USER:-} && ${SUDO_USER} != root ]]; then
   sudo -u "${SUDO_USER}" -- "${repo_root}/scripts/build-packages.sh"
-elif [[ ! -f ${repo_root}/repo/x86_64/archdev.db.tar.gz ]]; then
+elif [[ ! -f ${repo_root}/repo/x86_64/denden.db.tar.gz ]]; then
   echo "error: local repo not built; run scripts/build-packages.sh as a normal user first" >&2
   exit 1
 fi
@@ -47,7 +47,7 @@ trap 'rm -f -- "${build_start}"' EXIT
 
 # mkarchiso needs absolute repo paths, which depend on where this clone lives.
 pacman_conf="${work_dir}/pacman.conf.in"
-sed "s|@ARCHDEV_REPO@|${repo_root}/repo/\$arch|" "${repo_root}/archiso/pacman.conf" > "${pacman_conf}"
+sed "s|@DENDEN_REPO@|${repo_root}/repo/\$arch|" "${repo_root}/archiso/pacman.conf" > "${pacman_conf}"
 
 mkarchiso -v -C "${pacman_conf}" -w "${work_dir}" -o "${out_dir}" "${repo_root}/archiso"
 

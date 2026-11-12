@@ -1,11 +1,11 @@
-# archdev
+# Den Den
 
 A personal Arch Linux–based distro built as an environment for AI agents to
 work in effectively. It uses CachyOS's kernel and packages on top of Arch, and
 is built with [archiso](https://gitlab.archlinux.org/archlinux/archiso).
 
-> `archdev` is a working name. Rename the repo and set `iso_name` /
-> `iso_label` in `archiso/profiledef.sh` once a name is picked.
+> Named after the den den mushi, the snail phones everyone in One Piece talks
+> through. The command-line interface is `den`.
 
 ## Layout
 
@@ -15,7 +15,7 @@ is built with [archiso](https://gitlab.archlinux.org/archlinux/archiso).
 | `archiso/packages.x86_64` | Packages installed into the live image. |
 | `archiso/airootfs/` | Files overlaid onto the image's root filesystem. |
 | `archiso/profiledef.sh` | ISO name, boot modes, compression, file permissions. |
-| `archiso/pacman.conf` | Repos the image is built from: local `archdev`, `cachyos`, then Arch. |
+| `archiso/pacman.conf` | Repos the image is built from: local `denden`, `cachyos`, then Arch. |
 | `packages/` | PKGBUILDs for this distro's own packages (e.g. `t3code-cli`). |
 | `scripts/setup-build-host.sh` | One-time setup of an Arch build host. |
 | `scripts/build.sh` | Builds `packages/` into a local repo, then the ISO into `out/`. |
@@ -45,8 +45,8 @@ are lost:
 
 ```sh
 sudo pacman -Syu --needed git github-cli
-gh repo clone Lungren2/archdev ~/archdev
-cd ~/archdev
+gh repo clone Lungren2/denden ~/denden
+cd ~/denden
 sudo ./scripts/setup-build-host.sh   # once: archiso, makepkg, CachyOS key + mirrorlist
 sudo ./scripts/build.sh
 ```
@@ -65,7 +65,7 @@ run_archiso -u -i out/*.iso
 ## Flashing
 
 WSL can't see USB drives directly, so write the ISO from Windows. The ISO is
-reachable at `\\wsl$\archlinux\home\<user>\archdev\out\`.
+reachable at `\\wsl$\archlinux\home\<user>\denden\out\`.
 
 `scripts/flash.ps1` wipes a USB disk, writes the ISO in DD mode and verifies it
 by SHA-256. Run it from an elevated PowerShell; it refuses non-USB and boot

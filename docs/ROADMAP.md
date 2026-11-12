@@ -21,21 +21,21 @@ Each item lands as its own commit against the vanilla baseline.
 - [ ] Toolchain for local builds in the image: `base-devel`, `devtools` (`pkgctl`), `git`
 - [ ] `bubblewrap`, `snapper` in the image
 - [ ] Installer that lays the system out on Btrfs and picks CachyOS v3/v4/znver4 repos per CPU
-- [ ] `/etc/ethan/AGENTS.md`: the system contract agents load
+- [ ] `/etc/denden/AGENTS.md`: the system contract agents load
 
 ## 2. Local source
-- [ ] `/src` tree; this repo at `/src/archdev`
-- [ ] `ethan src get|build|diff|rebase|drop`
+- [ ] `/src` tree; this repo at `/src/denden`
+- [ ] `den src get|build|diff|rebase|drop`
 - [ ] `[local]` overlay repo ranked above all others
 - [ ] Rebase-on-update for modified packages, with an agent session on conflicts
 
 ## 3. Read-only contract
-- [ ] `ethand` daemon (Rust) on a Varlink socket
-- [ ] `ethan` CLI (`--json` everywhere): `machine inspect`, `package query`, `service status`, `history query`
+- [ ] `dend` daemon (Rust) on a Varlink socket
+- [ ] `den` CLI (`--json` everywhere): `machine inspect`, `package query`, `service status`, `history query`
 - [ ] MCP server exposing the same operations
 
 ## 4. Agent sessions
-- [ ] `ethan session create|list|review|commit|discard`
+- [ ] `den session create|list|review|commit|discard`
 - [ ] Workspace snapshots, bubblewrap sandbox, cgroup limits
 - [ ] Brokered secrets for model API keys
 

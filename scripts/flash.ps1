@@ -10,7 +10,7 @@
 
 .EXAMPLE
   Get-Disk   # find the USB disk's number
-  .\flash.ps1 -IsoPath \\wsl.localhost\archlinux\home\ethan\archdev\out\archlinux-2026.11.11-x86_64.iso -DiskNumber 3
+  .\flash.ps1 -IsoPath \\wsl.localhost\archlinux\home\<user>\denden\out\denden-<date>-x86_64.iso -DiskNumber 3
 #>
 param(
   [Parameter(Mandatory)] [string] $IsoPath,
