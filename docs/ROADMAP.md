@@ -40,8 +40,8 @@ Each item lands as its own commit against the vanilla baseline.
   and Windows icons (Windows found on any disk), Limine hidden behind it as
   the recovery menu with bootable snapshots, a Plymouth splash; the live USB
   boots without a menu
-- [ ] Installed on real hardware: a dedicated SSD beside the Windows disk,
-  NVIDIA, the picker, splash and session on screen
+- [x] Installed on real hardware (Ryzen 5 5600X, RTX 3050): a dedicated SATA
+  SSD beside the Windows NVMe; the picker offers both systems
 
 Until the broker (milestone 5), agents run as the user, who has passwordless
 sudo. Snapshots before every pacman transaction are the safety net, and
