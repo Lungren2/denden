@@ -8,7 +8,7 @@
 
 pkgname=denden-boot
 pkgver=0.1.0
-pkgrel=3
+pkgrel=4
 pkgdesc='Den Den startup picker, recovery menu and boot splash'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -19,20 +19,23 @@ depends=(
 )
 makedepends=('imagemagick' 'librsvg' 'python')
 source=('mushi.py' 'denden-boot-update' 'denden-boot.hook' 'denden.plymouth'
-        'plymouth-quit-retain-splash.conf')
-sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+        'plymouth-quit-retain-splash.conf' 'denden-splash.hook')
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
 
 _fg='#eceef2'
-_bg='#0a0b0d'
+_bg='#07080a'   # also the splash background, in denden.plymouth
 
 build() {
   mkdir -p theme plymouth
   python mushi.py "${_fg}" > mushi.svg
   local mark=(magick -background none -density 192 mushi.svg -trim +repage)
 
-  # Background for the picker and the recovery menu: a soft glow in the middle.
-  magick -size 1920x1080 radial-gradient:"#1b1e25-${_bg}" \
-    -attenuate 0.08 +noise Uniform -depth 8 -define png:color-type=2 theme/background.png
+  # Background for the picker and the recovery menu: near black with a wide,
+  # faint glow behind the icons. The glow is a heavily blurred ellipse, so it
+  # has no visible edge; light noise keeps the dark gradient from banding.
+  magick -size 1920x1080 xc:"${_bg}" -fill '#111319' \
+    -draw 'ellipse 960,560 760,460 0,360' -blur 0x260 \
+    -attenuate 0.035 +noise Gaussian -depth 8 -define png:color-type=2 theme/background.png
 
   # Picker icons, the mark and a four-pane Windows logo of similar weight.
   "${mark[@]}" -resize 212x212 -gravity center -extent 256x256 theme/os_denden.png
@@ -61,6 +64,7 @@ build() {
 package() {
   install -Dm755 denden-boot-update "${pkgdir}/usr/bin/denden-boot-update"
   install -Dm644 denden-boot.hook "${pkgdir}/usr/share/libalpm/hooks/95-denden-boot.hook"
+  install -Dm644 denden-splash.hook "${pkgdir}/usr/share/libalpm/hooks/90-denden-splash.hook"
   install -Dm644 plymouth-quit-retain-splash.conf \
     "${pkgdir}/usr/lib/systemd/system/plymouth-quit.service.d/denden-retain-splash.conf"
   install -Dm644 -t "${pkgdir}/usr/share/denden/boot/theme" theme/*
