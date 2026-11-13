@@ -7,8 +7,7 @@ iso_publisher="Den Den <https://github.com/Lungren2/denden>"
 iso_application="Den Den Live"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="arch"
-bootmodes=('bios.syslinux'
-           'uefi.systemd-boot')
+bootmodes=('uefi.systemd-boot')
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
 airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86,arm64' '-b' '1M' '-Xdict-size' '1M')

@@ -27,7 +27,6 @@ dmraid
 dnsmasq
 dosfstools
 e2fsprogs
-edk2-shell
 efibootmgr
 espeakup
 ethtool
@@ -67,8 +66,6 @@ man-db
 man-pages
 mc
 mdadm
-memtest86+
-memtest86+-efi
 mkinitcpio
 mkinitcpio-archiso
 mkinitcpio-nfs-utils
@@ -110,7 +107,6 @@ smartmontools
 sof-firmware
 squashfs-tools
 sudo
-syslinux
 systemd-resolvconf
 t3code-cli
 tcpdump
