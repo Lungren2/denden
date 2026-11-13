@@ -6,7 +6,7 @@
 
 pkgname=denden-base
 pkgver=0.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Den Den base system: agents, toolchains, snapshots and the agent contract'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -26,7 +26,7 @@ depends=(
   'ripgrep' 'fd' 'jq' 'openssh' 'man-db' 'less'
 )
 source=('AGENTS.md')
-sha256sums=('9491066d3583c50e62fb548b43ff349855c975213db974709f984c19dbb0899d')
+sha256sums=('2c1b9e2b014c8249d01180a0d537a2f8f826cc0036553832a8ef3b6c65527280')
 
 package() {
   install -Dm644 AGENTS.md "${pkgdir}/etc/denden/AGENTS.md"

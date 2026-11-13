@@ -36,8 +36,12 @@ Each item lands as its own commit against the vanilla baseline.
   repo cloned to `/src/denden`
 - [x] Installer tested in a VM (`scripts/test-install.sh`): whole-disk install,
   boot, autologin into Niri with T3 Code; the session checked nested in WSLg
-- [ ] Installed on real hardware: free-space install beside Windows, NVIDIA,
-  the session on screen
+- [x] `denden-boot`: no text on a normal start. A rEFInd picker with Den Den
+  and Windows icons (Windows found on any disk), Limine hidden behind it as
+  the recovery menu with bootable snapshots, a Plymouth splash; the live USB
+  boots without a menu
+- [ ] Installed on real hardware: a dedicated SSD beside the Windows disk,
+  NVIDIA, the picker, splash and session on screen
 
 Until the broker (milestone 5), agents run as the user, who has passwordless
 sudo. Snapshots before every pacman transaction are the safety net, and

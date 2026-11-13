@@ -11,8 +11,8 @@ Read it before changing anything outside your project.
   packages), `[cachyos]`, then Arch's `core` and `extra`.
 - Btrfs. Root (`/`) is snapshotted before and after every pacman transaction;
   `/home` and `/src` are snapshotted hourly. `snapper list-configs` and
-  `snapper -c root list` show them, and the boot menu can start any root
-  snapshot.
+  `snapper -c root list` show them, and the recovery menu (hold a key as Den
+  Den starts) can boot any root snapshot.
 - Toolchains: Node (npm, pnpm), Bun, Rust, Python (`uv`), .NET, and Docker
   with Compose and Buildx. The user is in the `docker` group.
 - You run as the user. `sudo` works without a password.

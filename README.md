@@ -16,7 +16,7 @@ is built with [archiso](https://gitlab.archlinux.org/archlinux/archiso).
 | `archiso/airootfs/` | Files overlaid onto the image's root filesystem. |
 | `archiso/profiledef.sh` | ISO name, boot modes, compression, file permissions. |
 | `archiso/pacman.conf` | Repos the image is built from: local `denden`, `cachyos`, then Arch. |
-| `packages/` | PKGBUILDs for this distro's own packages: T3 Code, the `denden-base` and `denden-desktop` meta packages, the installer. |
+| `packages/` | PKGBUILDs for this distro's own packages: T3 Code, the `denden-base` and `denden-desktop` meta packages, the startup screens (`denden-boot`), the installer. |
 | `scripts/setup-build-host.sh` | One-time setup of an Arch build host. |
 | `scripts/build.sh` | Builds `packages/` into a local repo, then the ISO into `out/`. |
 | `scripts/test-install.sh` | Installs the newest ISO onto a virtual disk in a VM, then boots it. |
@@ -61,14 +61,18 @@ Test the result without real hardware:
 ```sh
 sudo pacman -S --needed qemu-desktop edk2-ovmf
 run_archiso -u -i out/*.iso          # boot the live image
-sudo pacman -S --needed qemu-base qemu-hw-display-virtio-vga edk2-ovmf socat
+sudo pacman -S --needed qemu-base qemu-hw-display-virtio-vga edk2-ovmf socat \
+  limine gptfdisk dosfstools mtools
 ./scripts/test-install.sh            # install to a virtual disk, then boot it
+./scripts/test-install.sh windows    # boot it and pick Windows at startup
 ```
 
 `test-install.sh` runs `denden-install` unattended in a KVM VM against a blank
-virtual disk, boots the result and saves a screenshot. A VM without a GPU can't
-show the Niri session (niri won't render in software), so check the session
-in the guest's journal; the script shuts the VM down cleanly for that.
+virtual disk, with a second small disk that looks like a Windows disk to the
+startup picker. It boots the result and saves screenshots of the start (every
+2 s) and the desktop. A VM without a GPU can't show the Niri session (niri
+won't render in software), so check the session in the guest's journal; the
+script shuts the VM down cleanly for that.
 
 ## Flashing
 
@@ -100,9 +104,14 @@ space, keeping the partitions already there (e.g. beside Windows). Then it asks
 for a hostname, user and time zone, and confirms before touching anything.
 It creates a 4 GiB boot partition and a Btrfs partition with the subvolumes
 `@`, `@home`, `@src`, `@snapshots`, `@log`, `@pkg` and `@docker`, installs
-`denden-desktop` plus drivers for the GPU it finds, and boots with Limine.
-Root snapshots are taken around every pacman transaction and appear in the
-boot menu. After installing, `sudo limine-scan` adds Windows to that menu.
+`denden-desktop` plus drivers for the GPU it finds.
+
+The computer then starts with a picker showing Den Den and, if Windows is on
+any disk, Windows (it remembers the last choice; with Den Den alone it goes
+straight on), then a splash until the desktop is up. Root snapshots are taken
+around every pacman transaction; to boot one, hold a key as Den Den starts to
+show the recovery menu. If Windows goes on another disk later, run
+`sudo denden-boot-update` to add it to the picker.
 
 ## License
 
