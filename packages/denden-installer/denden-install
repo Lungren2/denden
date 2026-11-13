@@ -14,8 +14,9 @@
 #
 # Layout: a 4 GiB FAT32 boot partition (kernels and bootable snapshots live
 # there) and one Btrfs partition with the subvolumes @, @home, @src,
-# @snapshots, @log, @pkg and @docker. Boots with Limine; root snapshots are
-# taken around every pacman transaction and appear in the boot menu.
+# @snapshots, @log, @pkg and @docker. Starts with the denden-boot picker (Den
+# Den, plus Windows when it's on any disk) and a splash; root snapshots are
+# taken around every pacman transaction and appear in the recovery menu.
 set -euo pipefail
 
 readonly LOG=/var/log/denden-install.log
@@ -200,7 +201,7 @@ echo "CPU: ${vendor}, CachyOS repos: ${tier:-generic x86-64 only}"
 
 packages=(
   base linux-cachyos linux-firmware
-  btrfs-progs limine limine-mkinitcpio-hook limine-snapper-sync efibootmgr
+  btrfs-progs denden-boot
   networkmanager sudo nano vim
   cachyos-keyring cachyos-mirrorlist
   denden-installer denden-desktop
@@ -212,6 +213,7 @@ case ${tier} in
   v4|znver4) packages+=(cachyos-v4-mirrorlist) ;;
 esac
 
+nvidia=0
 gpus=$(lspci -nn | grep -E '\[(0300|0302|0380)\]' || true)
 echo "${gpus:-no GPU found}" | sed 's/^/GPU: /'
 if grep -q '\[10de:' <<<"${gpus}"; then
@@ -220,6 +222,7 @@ if grep -q '\[10de:' <<<"${gpus}"; then
   device=$(grep -o '\[10de:[0-9a-f]\{4\}\]' <<<"${gpus}" | head -n1 | cut -c7-10)
   if (( 16#${device} >= 16#1e00 )); then
     packages+=(linux-cachyos-nvidia-open nvidia-utils)
+    nvidia=1
   else
     echo "warning: this NVIDIA GPU predates the open driver; using nouveau"
     packages+=(mesa vulkan-nouveau)
@@ -285,7 +288,10 @@ sed "s|file:///var/lib/denden/repo|file://${LIVE_REPO}|" <<<"${target_conf}" > "
 
 root_uuid=$(blkid -o value -s UUID "${root}")
 mkdir -p "${TARGET}/etc/kernel" "${TARGET}/etc/default"
-echo "root=UUID=${root_uuid} rootflags=subvol=/@ rw quiet" > "${TARGET}/etc/kernel/cmdline"
+# Quiet: the splash covers the boot, with no kernel or systemd messages.
+echo "root=UUID=${root_uuid} rootflags=subvol=/@ rw quiet splash loglevel=3" \
+  "rd.udev.log_level=3 systemd.show_status=auto vt.global_cursor_default=0" \
+  > "${TARGET}/etc/kernel/cmdline"
 # Read by both limine-entry-tool and limine-snapper-sync ahead of their own
 # packaged configs, so it repeats the packaged defaults that matter.
 cat > "${TARGET}/etc/default/limine" <<EOF
@@ -297,7 +303,9 @@ ENABLE_LIMINE_FALLBACK=yes
 ENABLE_VERIFICATION=yes
 BOOT_ORDER="*, *fallback, Snapshots"
 ENABLE_SORT=no
-FIND_BOOTLOADERS=yes
+# The firmware starts the denden-boot picker, which lists Windows; Limine only
+# boots Den Den. (With yes, Limine lists its own fallback copy.)
+FIND_BOOTLOADERS=no
 ENABLE_UKI=no
 
 ROOT_SUBVOLUME_PATH="/@"
@@ -307,6 +315,27 @@ LIMIT_USAGE_PERCENT=85
 EXCLUDE_SNAPSHOT_ENTRIES="Windows*, windows*"
 RESTORE_METHOD=replace
 SNAPSHOT_FORMAT_CHOICE=2
+EOF
+# Limine's own settings. limine-entry-tool and limine-snapper-sync add the
+# entries below these and keep the settings as they are.
+cat > "${TARGET}/boot/limine.conf" <<'EOF'
+# Den Den recovery menu. Limine starts Den Den without showing anything; hold
+# a key as Den Den starts to show this menu, with the kernel and bootable
+# snapshots. The entries below are written by limine-entry-tool and
+# limine-snapper-sync.
+timeout: 1
+quiet: yes
+default_entry: Den Den/linux-cachyos
+hash_mismatch_panic: no
+interface_branding: Recovery
+interface_branding_colour: eceef2
+interface_help_colour: 5b616d
+interface_help_colour_bright: eceef2
+wallpaper: boot():/EFI/denden/theme/background.png
+term_background: ff000000
+term_foreground: c9cdd4
+term_margin: 0
+term_margin_gradient: 0
 EOF
 
 # --- Install ----------------------------------------------------------------
@@ -349,7 +378,9 @@ install -m 0440 /dev/stdin /etc/sudoers.d/10-denden <<'SUDO'
 %wheel ALL=(ALL:ALL) NOPASSWD: ALL
 SUDO
 
-# Log in straight to the desktop; the greeter shows after logging out.
+# Log in straight to the desktop; the greeter shows after logging out. The
+# session's own output would print over the splash on the console; Niri logs
+# to the journal.
 cat > /etc/greetd/config.toml <<'GREETD'
 [terminal]
 vt = 1
@@ -359,13 +390,21 @@ command = "agreety --cmd niri-session"
 user = "greeter"
 
 [initial_session]
-command = "niri-session"
+command = "sh -c 'exec niri-session >/dev/null 2>&1'"
 user = "${user}"
 GREETD
 
-# Boot read-only snapshots with a writable overlay.
+# Boot read-only snapshots with a writable overlay, and show the splash.
 sed -i -E 's/^(HOOKS=\(.*filesystems)(.*\))/\1 sd-btrfs-overlayfs\2/' /etc/mkinitcpio.conf
+sed -i -E 's/^(HOOKS=\(.*\bsystemd)\b/\1 plymouth/' /etc/mkinitcpio.conf
 grep -q sd-btrfs-overlayfs /etc/mkinitcpio.conf
+grep -q plymouth /etc/mkinitcpio.conf
+plymouth-set-default-theme denden
+if ((${nvidia})); then
+  # Load the driver in the initramfs so the splash runs on it from the start.
+  echo 'MODULES+=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)' \
+    > /etc/mkinitcpio.conf.d/10-denden-nvidia.conf
+fi
 
 # Snapper. Root snapshots live in the separate @snapshots subvolume, so swap
 # out the nested one create-config makes.
@@ -393,8 +432,10 @@ sudo -u ${user} git clone --quiet ${DENDEN_GIT} /src/denden \
 systemctl enable NetworkManager greetd docker fstrim.timer systemd-timesyncd \
   snapper-timeline.timer snapper-cleanup.timer limine-snapper-sync.service
 
-limine-install
+# Limine stays out of the firmware's boot list; the picker starts it.
+limine-install --no-efi-register
 limine-update
+denden-boot-update
 EOF
 arch-chroot "${TARGET}" bash /root/denden-configure.sh
 rm "${TARGET}/root/denden-configure.sh"
@@ -409,6 +450,6 @@ cat <<EOF
 Den Den is installed on ${disk}. Remove the USB stick and reboot.
 
 You'll be logged in to T3 Code. Mod (the Windows key) + Shift + / lists the
-key bindings. To add Windows or other systems to the boot menu, run
-'sudo limine-scan' once you're in.
+key bindings. If you install Windows on another disk later, run
+'sudo denden-boot-update' to add it to the startup picker.
 EOF
