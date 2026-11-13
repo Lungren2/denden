@@ -32,11 +32,19 @@ for pkgbuild in "${repo_root}"/packages/*/PKGBUILD; do
     continue
   fi
   echo "==> Building $(basename -- "${pkg_dir}")"
-  # Packages that compile nothing (meta packages, repackaged binaries) skip
-  # dependency checks, so building them doesn't install their whole runtime
-  # closure on the build host, nor need [denden]/[cachyos] configured there.
+  # Packages that compile nothing (meta packages, repackaged binaries,
+  # scripts and artwork: no build step, or arch 'any') skip dependency checks,
+  # so building them doesn't install their whole runtime closure on the build
+  # host, nor need [denden]/[cachyos] configured there. Their build tools
+  # (makedepends) are installed directly.
   dep_flag=--syncdeps
-  grep -qE '^(prepare|build)\(\)' "${pkgbuild}" || dep_flag=--nodeps
+  if ! grep -qE '^(prepare|build)\(\)' "${pkgbuild}" || grep -qE "^arch=\('any'\)" "${pkgbuild}"; then
+    dep_flag=--nodeps
+    mapfile -t make_deps < <(bash -c 'source "$1" && for d in "${makedepends[@]}"; do echo "${d}"; done' _ "${pkgbuild}")
+    if ((${#make_deps[@]})); then
+      sudo pacman -S --needed --noconfirm --asdeps "${make_deps[@]}"
+    fi
+  fi
   (cd -- "${pkg_dir}" && makepkg "${dep_flag}" --clean --cleanbuild --noconfirm)
   # --packagelist includes a -debug package even when makepkg ends up with
   # nothing to put in it, so add only what was actually built.

@@ -1,0 +1,76 @@
+# Maintainer: Ethan <ethanogle012@outlook.com>
+#
+# denden-boot: how Den Den starts. A rEFInd picker with a Den Den icon and,
+# when Windows is installed, a Windows icon; Limine behind the Den Den icon,
+# hidden unless a key is held (it holds the recovery menu with bootable
+# snapshots); and a Plymouth splash until the desktop is up. The artwork is
+# drawn here from mushi.py. See denden-boot-update for the details.
+
+pkgname=denden-boot
+pkgver=0.1.0
+pkgrel=3
+pkgdesc='Den Den startup picker, recovery menu and boot splash'
+arch=('any')
+url='https://github.com/Lungren2/denden'
+license=('MIT')
+depends=(
+  'efibootmgr' 'limine' 'limine-mkinitcpio-hook' 'limine-snapper-sync'
+  'plymouth' 'refind' 'util-linux'
+)
+makedepends=('imagemagick' 'librsvg' 'python')
+source=('mushi.py' 'denden-boot-update' 'denden-boot.hook' 'denden.plymouth'
+        'plymouth-quit-retain-splash.conf')
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+_fg='#eceef2'
+_bg='#0a0b0d'
+
+build() {
+  mkdir -p theme plymouth
+  python mushi.py "${_fg}" > mushi.svg
+  local mark=(magick -background none -density 192 mushi.svg -trim +repage)
+
+  # Background for the picker and the recovery menu: a soft glow in the middle.
+  magick -size 1920x1080 radial-gradient:"#1b1e25-${_bg}" \
+    -attenuate 0.08 +noise Uniform -depth 8 -define png:color-type=2 theme/background.png
+
+  # Picker icons, the mark and a four-pane Windows logo of similar weight.
+  "${mark[@]}" -resize 212x212 -gravity center -extent 256x256 theme/os_denden.png
+  magick -size 256x256 xc:none -fill "${_fg}" \
+    -draw 'rectangle 70,70 124,124' -draw 'rectangle 132,70 186,124' \
+    -draw 'rectangle 70,132 124,186' -draw 'rectangle 132,132 186,186' theme/os_windows.png
+  magick -size 216x216 xc:none -fill 'rgba(255,255,255,0.07)' \
+    -stroke 'rgba(255,255,255,0.16)' -strokewidth 2 \
+    -draw 'roundrectangle 1,1 214,214 32,32' theme/selection.png
+
+  # Splash: the mark, and a ring of twelve dots with a fading trail.
+  "${mark[@]}" -resize 260x260 plymouth/watermark.png
+  local frame draw
+  for frame in {0..11}; do
+    # One -fill/-draw pair per dot; the dot at the frame's position is brightest.
+    mapfile -t draw < <(awk -v f="${frame}" 'BEGIN {
+      for (d = 0; d < 12; d++) {
+        r = d * 30 * 3.14159265 / 180; x = 24 + 17 * sin(r); y = 24 - 17 * cos(r)
+        printf "-fill\nrgba(236,238,242,%.2f)\n-draw\ncircle %.1f,%.1f %.1f,%.1f\n",
+          1 - ((f - d + 12) % 12) * 0.075, x, y, x, y + 3.2
+      } }')
+    magick -size 48x48 xc:none "${draw[@]}" "plymouth/throbber-$(printf %04d $((frame + 1))).png"
+  done
+}
+
+package() {
+  install -Dm755 denden-boot-update "${pkgdir}/usr/bin/denden-boot-update"
+  install -Dm644 denden-boot.hook "${pkgdir}/usr/share/libalpm/hooks/95-denden-boot.hook"
+  install -Dm644 plymouth-quit-retain-splash.conf \
+    "${pkgdir}/usr/lib/systemd/system/plymouth-quit.service.d/denden-retain-splash.conf"
+  install -Dm644 -t "${pkgdir}/usr/share/denden/boot/theme" theme/*
+  install -Dm644 mushi.svg "${pkgdir}/usr/share/denden/boot/mushi.svg"
+
+  local theme="${pkgdir}/usr/share/plymouth/themes/denden"
+  install -Dm644 -t "${theme}" denden.plymouth plymouth/*
+  # Images for prompts (none in a normal boot) come from the stock theme.
+  local image
+  for image in bullet capslock entry keyboard keymap-render lock; do
+    ln -s "../spinner/${image}.png" "${theme}/${image}.png"
+  done
+}

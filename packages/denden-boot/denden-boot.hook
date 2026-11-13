@@ -1,0 +1,11 @@
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Target = refind
+Target = denden-boot
+
+[Action]
+Description = Updating the Den Den startup picker...
+When = PostTransaction
+Exec = /usr/bin/denden-boot-update

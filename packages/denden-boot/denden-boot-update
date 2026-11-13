@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# denden-boot-update: install Den Den's startup picker on the boot partition
+# and keep it current.
+#
+# How Den Den starts: the firmware runs rEFInd, which shows a Den Den icon
+# and, when Windows is on any disk, a Windows icon; with Den Den alone it
+# skips straight on. The Den Den icon starts Limine, which boots without
+# showing anything unless a key is held, when it shows the recovery menu (the
+# kernel and bootable snapshots). Plymouth shows the splash until the desktop
+# is up.
+#
+# This copies rEFInd and the theme to the boot partition, writes rEFInd's
+# config for the systems it finds, and registers rEFInd with the firmware as
+# "Den Den" if no entry for it exists. The installer runs it, and so does a
+# pacman hook when rEFInd or denden-boot is upgraded. Run it again after
+# installing Windows on another disk.
+set -euo pipefail
+
+readonly SHARE=/usr/share/denden/boot
+readonly DIR=EFI/denden
+readonly ESP_TYPE=c12a7328-f81f-11d2-ba4b-00a0c93ec93b
+
+die() { echo "denden-boot-update: $*" >&2; exit 1; }
+
+[[ ${EUID} -eq 0 ]] || die "run as root"
+esp=$(. /etc/default/limine 2>/dev/null; echo "${ESP_PATH:-/boot}")
+[[ $(findmnt -no FSTYPE --mountpoint "${esp}" 2>/dev/null) == vfat ]] \
+  || die "the boot partition isn't mounted at ${esp}"
+esp_dev=$(findmnt -no SOURCE --mountpoint "${esp}")
+
+install -Dm644 /usr/share/refind/refind_x64.efi "${esp}/${DIR}/refind_x64.efi"
+# rEFInd falls back to a text menu when its stock icons aren't beside it.
+rm -rf "${esp:?}/${DIR}/icons"
+cp -r /usr/share/refind/icons "${esp}/${DIR}/icons"
+install -d "${esp}/${DIR}/theme"
+install -m644 "${SHARE}"/theme/* "${esp}/${DIR}/theme/"
+
+# Windows: any EFI system partition holding the Windows Boot Manager.
+windows=''
+while read -r dev type partuuid; do
+  [[ ${type} == "${ESP_TYPE}" && -n ${partuuid} ]] || continue
+  mnt=$(findmnt -no TARGET --first-only "${dev}" || true) tmp=''
+  if [[ -z ${mnt} ]]; then
+    tmp=$(mktemp -d)
+    mount -o ro "${dev}" "${tmp}" 2>/dev/null || { rmdir "${tmp}"; continue; }
+    mnt=${tmp}
+  fi
+  if [[ -f ${mnt}/EFI/Microsoft/Boot/bootmgfw.efi ]]; then
+    windows=${partuuid}
+  fi
+  if [[ -n ${tmp} ]]; then umount "${tmp}"; rmdir "${tmp}"; fi
+  [[ -z ${windows} ]] || break
+done < <(lsblk -rno PATH,PARTTYPE,PARTUUID)
+
+{
+  cat <<EOF
+# Written by denden-boot-update; changes here are overwritten. To change the
+# startup picker, edit denden-boot-update in /src/denden and rebuild.
+
+# With one system, start it straight away (holding a key shows the picker).
+timeout $([[ -n ${windows} ]] && echo 5 || echo -1)
+use_nvram false
+resolution max
+hideui singleuser,safemode,hwtest,arrows,hints,editor,badges,label
+# No tool row. rEFInd 0.14.2 only overwrites the first entries of its default
+# tool list, so every slot gets a tool that isn't installed (netboot needs
+# ipxe.efi). A bare "showtools" leaves the defaults.
+showtools $(printf 'netboot,%.0s' {1..23} | sed 's/,$//')
+banner theme/background.png
+banner_scale fillscreen
+big_icon_size 192
+selection_big theme/selection.png
+selection_small theme/selection.png
+scanfor manual
+
+menuentry "Den Den" {
+    icon /${DIR}/theme/os_denden.png
+    loader /EFI/limine/limine_x64.efi
+    graphics on
+}
+EOF
+  if [[ -n ${windows} ]]; then
+    cat <<EOF
+
+menuentry "Windows" {
+    icon /${DIR}/theme/os_windows.png
+    volume ${windows}
+    loader /EFI/Microsoft/Boot/bootmgfw.efi
+    graphics on
+}
+EOF
+  fi
+} > "${esp}/${DIR}/refind.conf"
+echo "Startup picker: Den Den${windows:+ and Windows (partition ${windows})}"
+
+# The firmware entry, unless one already starts rEFInd. A new entry goes
+# first in the boot order.
+if [[ -d /sys/firmware/efi/efivars ]]; then
+  if ! efibootmgr -v | grep -qiF '\EFI\denden\refind_x64.efi'; then
+    disk=/dev/$(lsblk -no PKNAME "${esp_dev}")
+    part=$(<"/sys/class/block/$(basename "${esp_dev}")/partition")
+    efibootmgr --create --disk "${disk}" --part "${part}" --label "Den Den" \
+      --loader '\EFI\denden\refind_x64.efi' >/dev/null
+    echo "Registered \"Den Den\" with the firmware"
+  fi
+  # The picker starts Limine, so Limine's own entry (limine-install adds one
+  # when Limine is first installed) would only add a stray "Limine" to the
+  # firmware's boot menu.
+  limine_entries=$(efibootmgr -v | grep -iF '\EFI\limine\limine_x64.efi' \
+    | grep -o '^Boot[0-9A-F]\{4\}' || true)
+  for entry in ${limine_entries}; do
+    efibootmgr --bootnum "${entry#Boot}" --delete-bootnum >/dev/null
+    echo "Removed Limine's own firmware entry (${entry})"
+  done
+else
+  echo "Not booted with UEFI; skipped registering with the firmware"
+fi

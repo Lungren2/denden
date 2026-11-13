@@ -1,0 +1,62 @@
+[Plymouth Theme]
+Name=Den Den
+Description=The Den Den mark with a spinner below it.
+ModuleName=two-step
+
+[two-step]
+Font=Adwaita Sans 12
+TitleFont=Adwaita Sans Light 30
+MonospaceFont=Adwaita Mono 12
+ImageDir=/usr/share/plymouth/themes/denden
+DialogHorizontalAlignment=.5
+DialogVerticalAlignment=.382
+TitleHorizontalAlignment=.5
+TitleVerticalAlignment=.382
+HorizontalAlignment=.5
+VerticalAlignment=.66
+WatermarkHorizontalAlignment=.5
+WatermarkVerticalAlignment=.44
+Transition=none
+TransitionDuration=0.0
+BackgroundStartColor=0x0a0b0d
+BackgroundEndColor=0x0a0b0d
+ProgressBarBackgroundColor=0x2a2d34
+ProgressBarForegroundColor=0xeceef2
+MessageBelowAnimation=true
+
+[boot-up]
+UseEndAnimation=false
+
+[shutdown]
+UseEndAnimation=false
+
+[reboot]
+UseEndAnimation=false
+
+[updates]
+SuppressMessages=true
+ProgressBarShowPercentComplete=true
+UseProgressBar=true
+Title=Installing updates
+SubTitle=Keep your computer on
+
+[system-upgrade]
+SuppressMessages=true
+ProgressBarShowPercentComplete=true
+UseProgressBar=true
+Title=Updating Den Den
+SubTitle=Keep your computer on
+
+[firmware-upgrade]
+SuppressMessages=true
+ProgressBarShowPercentComplete=true
+UseProgressBar=true
+Title=Updating firmware
+SubTitle=Keep your computer on
+
+[system-reset]
+SuppressMessages=true
+ProgressBarShowPercentComplete=true
+UseProgressBar=true
+Title=Resetting
+SubTitle=Keep your computer on
