@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Keep a copy of every GitHub repository you own, or that belongs to an
+# organisation you're in, under ~/Projects: your own as ~/Projects/<repo>,
+# an organisation's as ~/Projects/<org>/<repo>. Archived repositories are left
+# out.
+#
+#   denden-repos            clone what's missing, update what's there
+#   denden-repos --sign-in  sign in to GitHub first (opens the browser)
+#
+# A repository is only updated when that's safe: no uncommitted changes and
+# a branch that can fast-forward to its upstream. Anything else is fetched
+# and left alone. A user timer runs this every hour.
+set -uo pipefail
+
+root="${DENDEN_PROJECTS:-${HOME}/Projects}"
+
+if [[ ${1:-} == --sign-in ]]; then
+  clipboard=()
+  command -v wl-copy >/dev/null && clipboard=(--clipboard)
+  gh auth login --hostname github.com --git-protocol https --web "${clipboard[@]}" || exit 1
+fi
+
+if ! gh auth status --hostname github.com >/dev/null 2>&1; then
+  echo "Not signed in to GitHub. Open \"Sign in to GitHub\" from the launcher, or run: denden-repos --sign-in"
+  exit 0
+fi
+
+# Let git use the GitHub CLI's sign-in for https remotes.
+gh auth setup-git --hostname github.com
+
+# One run at a time: the timer and a sign-in can overlap.
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/denden-repos.lock"
+flock 9
+
+me=$(gh api user --jq .login) || exit 1
+mkdir -p -- "${root}"
+
+cloned=0 updated=0 current=0 skipped=0 failed=0
+while IFS=$'\t' read -r full owner name; do
+  if [[ ${owner} == "${me}" ]]; then
+    dir="${root}/${name}"
+  else
+    dir="${root}/${owner}/${name}"
+  fi
+
+  if [[ ! -e ${dir} ]]; then
+    mkdir -p -- "$(dirname -- "${dir}")"
+    if gh repo clone "${full}" "${dir}" -- --quiet; then
+      echo "cloned   ${full}"
+      cloned=$((cloned + 1))
+    else
+      echo "failed   ${full} (clone)"
+      failed=$((failed + 1))
+    fi
+    continue
+  fi
+  if [[ ! -d ${dir}/.git ]]; then
+    echo "skipped  ${full}: ${dir} exists and isn't a git repository"
+    skipped=$((skipped + 1))
+    continue
+  fi
+
+  if ! git -C "${dir}" fetch --quiet --all --prune; then
+    echo "failed   ${full} (fetch)"
+    failed=$((failed + 1))
+    continue
+  fi
+  if ! git -C "${dir}" rev-parse --abbrev-ref '@{upstream}' >/dev/null 2>&1; then
+    current=$((current + 1))  # no upstream branch to follow
+  elif [[ -n $(git -C "${dir}" status --porcelain) ]]; then
+    echo "skipped  ${full}: uncommitted changes"
+    skipped=$((skipped + 1))
+  elif git -C "${dir}" merge-base --is-ancestor '@{upstream}' HEAD; then
+    current=$((current + 1))
+  elif git -C "${dir}" merge-base --is-ancestor HEAD '@{upstream}'; then
+    if git -C "${dir}" merge --quiet --ff-only '@{upstream}'; then
+      echo "updated  ${full}"
+      updated=$((updated + 1))
+    else
+      echo "failed   ${full} (fast-forward)"
+      failed=$((failed + 1))
+    fi
+  else
+    echo "skipped  ${full}: its branch and upstream have diverged"
+    skipped=$((skipped + 1))
+  fi
+done < <(gh api --paginate 'user/repos?affiliation=owner,organization_member&per_page=100' \
+  --jq '.[] | select(.archived | not) | [.full_name, .owner.login, .name] | @tsv')
+
+echo "${cloned} cloned, ${updated} updated, ${current} up to date, ${skipped} left alone, ${failed} failed"
+((failed == 0))

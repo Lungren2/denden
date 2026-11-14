@@ -1,0 +1,11 @@
+[Unit]
+Description=Bring GitHub repositories into ~/Projects
+Documentation=file:///usr/bin/denden-repos
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/denden-repos
+Nice=10
+IOSchedulingClass=idle

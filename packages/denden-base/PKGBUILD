@@ -1,12 +1,13 @@
 # Maintainer: Ethan <ethanogle012@outlook.com>
 #
 # What an installed Den Den system adds on top of `base`: the agents, the
-# toolchains the user's projects need, snapshots, and the system contract
+# toolchains the user's projects need, snapshots, the user's GitHub
+# repositories kept in ~/Projects (denden-repos), and the system contract
 # agents load (/etc/denden/AGENTS.md).
 
 pkgname=denden-base
 pkgver=0.1.0
-pkgrel=2
+pkgrel=3
 pkgdesc='Den Den base system: agents, toolchains, snapshots and the agent contract'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -25,8 +26,18 @@ depends=(
   # Tools agents reach for
   'ripgrep' 'fd' 'jq' 'openssh' 'man-db' 'less'
 )
-source=('AGENTS.md')
-sha256sums=('2c1b9e2b014c8249d01180a0d537a2f8f826cc0036553832a8ef3b6c65527280')
+source=(
+  'AGENTS.md'
+  'denden-repos'
+  'denden-repos.service'
+  'denden-repos.timer'
+)
+sha256sums=(
+  '7354cbbc332d2bf4d75367c3b257ed632874e2fbbe31200153b72ad0ecb73b89'
+  '02f8a1d764a8067db6eb82a203b3a3e164a9a1416a73b2561ff0ace6e4d59135'
+  '978a0a07a01ed7f4a3c60b63b3a78fea5964fd158947cd420725967f7bc5cf6c'
+  '0d53cceed1c1addd0bf2befdf0b6161c074419f020ce772956cbddde73dd6b3e'
+)
 
 package() {
   install -Dm644 AGENTS.md "${pkgdir}/etc/denden/AGENTS.md"
@@ -38,4 +49,11 @@ package() {
   # Codex reads ~/.codex/AGENTS.md, so every new user gets it linked.
   install -d "${pkgdir}/etc/skel/.codex"
   ln -s /etc/denden/AGENTS.md "${pkgdir}/etc/skel/.codex/AGENTS.md"
+
+  # The user's GitHub repositories in ~/Projects, refreshed hourly once
+  # they've signed in. The timer is on for every user.
+  install -Dm755 denden-repos "${pkgdir}/usr/bin/denden-repos"
+  install -Dm644 -t "${pkgdir}/usr/lib/systemd/user" denden-repos.service denden-repos.timer
+  install -d "${pkgdir}/usr/lib/systemd/user/timers.target.wants"
+  ln -s ../denden-repos.timer "${pkgdir}/usr/lib/systemd/user/timers.target.wants/denden-repos.timer"
 }

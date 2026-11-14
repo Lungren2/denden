@@ -16,6 +16,10 @@ Read it before changing anything outside your project.
 - Toolchains: Node (npm, pnpm), Bun, Rust, Python (`uv`), .NET, and Docker
   with Compose and Buildx. The user is in the `docker` group.
 - You run as the user. `sudo` works without a password.
+- The user's GitHub repositories are in `~/Projects` (their own as
+  `~/Projects/<repo>`, an organisation's as `~/Projects/<org>/<repo>`).
+  `denden-repos` clones new ones and fast-forwards clean ones every hour; it
+  never touches a repository with uncommitted changes.
 
 ## Rules
 
