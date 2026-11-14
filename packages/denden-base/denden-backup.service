@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up /home and /src to the Den Den USB stick
+Documentation=file:///usr/bin/denden-backup
+ConditionPathExists=/etc/denden/backup.conf
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/denden-backup backup
+Nice=10
+IOSchedulingClass=idle

@@ -1,0 +1,2 @@
+# Back up as soon as the Den Den stick's backup partition appears.
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_PART_ENTRY_NAME}=="DENDEN_DATA", TAG+="systemd", ENV{SYSTEMD_WANTS}+="denden-backup.service"

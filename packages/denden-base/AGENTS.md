@@ -39,7 +39,8 @@ Read it before changing anything outside your project.
    helpers, `curl | sh` installers, or `sudo npm -g` / `sudo pip`.
 5. Change system configuration with drop-in files (`/etc/<name>.d/`) where the
    program supports them, and tell the user which files you changed.
-6. Don't delete snapshots or disable snap-pac. If the system needs rolling
+6. Don't delete snapshots or backups, or disable snap-pac or the backup
+   timers. If the system needs rolling
    back, tell the user which snapshot and let them decide.
 
 ## Changing a program
@@ -67,4 +68,6 @@ rebuilt replaces your build. Tell the user which packages you rebuilt.
 
 - Logs: `journalctl`, `/var/log/pacman.log`
 - Snapshots: `snapper -c root list`
+- Backups (on the Den Den USB stick): `denden-backup status`; restore a file
+  with `denden-backup restic restore latest --target <dir> --include <path>`
 - How this system is designed: `/src/denden/docs/agent-environment.md`

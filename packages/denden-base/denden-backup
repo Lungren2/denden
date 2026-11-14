@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# Back up /home and /src to the Den Den USB stick, with restic.
+#
+#   denden-backup setup     add a backup partition to the stick (asks first)
+#   denden-backup           back up now; runs by itself when the stick is
+#                           plugged in, and daily while it stays in
+#   denden-backup status    when the last backup ran
+#   denden-backup key       print the key the backups are encrypted with
+#   denden-backup restic …  any restic command against the backups, e.g.
+#                           `denden-backup restic snapshots`, or
+#                           `denden-backup restic restore latest --target /tmp/r --include ~/Projects/x`
+#
+# The stick keeps its Den Den image at the start and gets a partition named
+# DENDEN_DATA from 8 GiB to the end (scripts/flash.ps1 keeps it when the image
+# is re-flashed). Each backup copies a fresh snapper snapshot of /home and
+# /src, so files are captured as they were at one moment, leaves out caches,
+# worktrees and build output, thins old backups out, and reads part of the
+# backups back to check them.
+#
+# The key lives in /etc/denden/backup.key, never on the stick: save it in your
+# password manager, since without it the backups can't be restored.
+set -euo pipefail
+
+conf=/etc/denden/backup.conf
+key=/etc/denden/backup.key
+state=/var/lib/denden-backup
+mnt=/run/denden-backup
+label=DENDEN_DATA
+start_sector=16777216      # 8 GiB in 512-byte sectors: room for the image to grow
+repo_dir=restic
+
+die() { echo "denden-backup: $*" >&2; exit 1; }
+[[ ${EUID} -eq 0 ]] || exec sudo -- "$0" "$@"
+
+load_conf() {
+  [[ -r ${conf} ]] || die "not set up yet; run: denden-backup setup"
+  # shellcheck source=/dev/null
+  . "${conf}"
+}
+
+mount_data() {
+  local dev
+  dev=$(blkid -U "${DATA_UUID}" 2>/dev/null) || return 1
+  mkdir -p "${mnt}"
+  mountpoint -q "${mnt}" || mount -o noatime "${dev}" "${mnt}"
+  trap 'umount_data' EXIT
+}
+umount_data() {
+  sync
+  mountpoint -q "${mnt}" && umount "${mnt}"
+  rmdir "${mnt}" 2>/dev/null || true
+}
+
+restic_env() {
+  export RESTIC_REPOSITORY="${mnt}/${repo_dir}"
+  export RESTIC_PASSWORD_FILE="${key}"
+  export RESTIC_CACHE_DIR=/var/cache/denden-backup
+}
+
+# The Den Den stick: a USB disk whose first partition is a Den Den image.
+find_stick() {
+  local disk part
+  while read -r disk; do
+    part=$(lsblk -lnpo NAME,LABEL "${disk}" | awk '$2 ~ /^DENDEN_/ {print $1; exit}')
+    [[ -n ${part} ]] && echo "${disk}"
+  done < <(lsblk -dnpo NAME,TRAN | awk '$2 == "usb" {print $1}')
+}
+
+cmd_setup() {
+  local yes=0 disk sectors end dev
+  [[ ${1:-} == --yes ]] && yes=1
+  if [[ -r ${conf} ]]; then
+    . "${conf}"
+    if blkid -U "${DATA_UUID}" >/dev/null 2>&1; then
+      echo "Backups are already set up on this stick."; return 0
+    fi
+  fi
+
+  mapfile -t sticks < <(find_stick)
+  ((${#sticks[@]} == 1)) || die "plug in the Den Den USB stick (found ${#sticks[@]} Den Den sticks)"
+  disk=${sticks[0]}
+  echo "Den Den stick: ${disk}  $(lsblk -dno MODEL,SIZE "${disk}" | xargs)"
+
+  dev=$(lsblk -lnpo NAME,PARTLABEL "${disk}" | awk -v l="${label}" '$2 == l {print $1}')
+  if [[ -n ${dev} ]]; then
+    echo "It already has a backup partition; using it."
+  else
+    sectors=$(blockdev --getsz "${disk}")
+    end=$(( (sectors - 34) / 2048 * 2048 - 1 ))
+    (( end - start_sector > 4 * 1024 * 1024 * 2 )) || die "the stick is too small for a backup partition"
+    if lsblk -lnpo MOUNTPOINTS "${disk}" | grep -q .; then
+      die "the stick is in use (mounted); unmount it first"
+    fi
+    echo "This adds a backup partition of $(( (end - start_sector + 1) / 2 / 1024 / 1024 )) GiB after the Den Den image."
+    echo "The image stays bootable; anything else on the stick after 8 GiB is erased."
+    if ((yes == 0)); then
+      read -rp "Type yes to continue: " answer
+      [[ ${answer} == yes ]] || die "aborted"
+    fi
+    sgdisk -e -n "3:${start_sector}:${end}" -t 3:8300 -c "3:${label}" "${disk}" >/dev/null
+    partprobe "${disk}" 2>/dev/null || true
+    udevadm settle
+    dev=$(lsblk -lnpo NAME,PARTLABEL "${disk}" | awk -v l="${label}" '$2 == l {print $1}')
+    [[ -n ${dev} ]] || die "the new partition didn't appear"
+    mkfs.ext4 -q -F -L "${label}" -m 0 "${dev}"
+  fi
+
+  DATA_UUID=$(blkid -s UUID -o value "${dev}")
+  install -d -m 755 /etc/denden
+  printf 'DATA_UUID=%s\n' "${DATA_UUID}" > "${conf}"
+  if [[ ! -s ${key} ]]; then
+    (umask 077; head -c 32 /dev/urandom | base64 > "${key}")
+  fi
+  mount_data
+  restic_env
+  if [[ ! -f ${RESTIC_REPOSITORY}/config ]]; then
+    restic init --quiet
+  else
+    restic cat config >/dev/null || die "the stick has backups made with a different key; put that key in ${key}"
+  fi
+  umount_data; trap - EXIT
+  echo
+  echo "Backups are set up. They run when the stick is plugged in and daily while it is."
+  echo "Save this key in your password manager; without it the backups can't be restored:"
+  echo
+  echo "    $(cat "${key}")"
+  echo
+}
+
+cmd_backup() {
+  load_conf
+  if ! blkid -U "${DATA_UUID}" >/dev/null 2>&1; then
+    echo "The Den Den stick isn't plugged in; skipping."
+    return 0
+  fi
+  exec 9>/run/denden-backup.lock
+  flock -n 9 || { echo "A backup is already running."; return 0; }
+  mount_data
+  restic_env
+  mkdir -p "${state}"
+
+  # Snapshot /home and /src, then back the snapshots up under their real
+  # paths, in a mount namespace of their own.
+  local home_snap src_snap
+  home_snap=$(snapper --no-dbus -c home create -c number -d 'denden-backup' --print-number)
+  src_snap=$(snapper --no-dbus -c src create -c number -d 'denden-backup' --print-number)
+  trap 'snapper --no-dbus -c home delete "'"${home_snap}"'" || true; snapper --no-dbus -c src delete "'"${src_snap}"'" || true; umount_data' EXIT
+
+  unshare --mount --propagation private -- sh -ec '
+    mount --bind "/home/.snapshots/$1/snapshot" /home
+    mount --bind "/src/.snapshots/$2/snapshot" /src
+    exec restic backup --quiet --host "$(cat /etc/hostname)" --tag denden \
+      --exclude-file /usr/share/denden/backup-excludes --exclude-caches \
+      --one-file-system /home /src
+  ' _ "${home_snap}" "${src_snap}"
+
+  restic forget --quiet --tag denden --keep-daily 7 --keep-weekly 4 --keep-monthly 12 --prune
+  restic check --quiet --read-data-subset=2%
+
+  # Restore one file from the new backup and compare it with the snapshot it
+  # came from.
+  local path snap
+  path=$(restic ls --json latest | jq -r 'select(.type == "file" and .size > 0 and .size < 8388608) | .path' | shuf -n 1 || true)
+  if [[ -n ${path} ]]; then
+    case ${path} in
+      /home/*) snap=/home/.snapshots/${home_snap}/snapshot${path#/home} ;;
+      /src/*) snap=/src/.snapshots/${src_snap}/snapshot${path#/src} ;;
+    esac
+    cmp -s <(restic dump latest "${path}") "${snap}" || die "restore check failed: ${path} came back different"
+  fi
+
+  date +%s > "${state}/last-success"
+  echo "Backed up /home and /src to the Den Den stick."
+}
+
+cmd_status() {
+  load_conf
+  if [[ -r ${state}/last-success ]]; then
+    echo "Last backup: $(date -d "@$(cat "${state}/last-success")" '+%a %-d %b %Y, %H:%M')"
+  else
+    echo "No backup yet."
+  fi
+  if blkid -U "${DATA_UUID}" >/dev/null 2>&1; then echo "The stick is plugged in."; else echo "The stick isn't plugged in."; fi
+}
+
+case ${1:-backup} in
+  setup) shift; cmd_setup "$@" ;;
+  backup) cmd_backup ;;
+  status) cmd_status ;;
+  key) cat "${key}" ;;
+  restic) shift; load_conf; mount_data; restic_env; restic "$@" ;;
+  *) die "unknown command: $1 (setup, backup, status, key, restic)" ;;
+esac

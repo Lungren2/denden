@@ -1,0 +1,38 @@
+# What denden-backup leaves out: anything that can be downloaded or rebuilt.
+# restic patterns; a bare name matches at any depth. Directories holding a
+# CACHEDIR.TAG (Cargo's target/, among others) are left out too.
+
+# Caches, trash and the snapshots themselves
+/home/*/.cache
+/home/*/.local/share/Trash
+/home/.snapshots
+/src/.snapshots
+
+# Package and toolchain downloads
+/home/*/.npm
+/home/*/.bun/install/cache
+/home/*/.local/share/pnpm/store
+/home/*/.cargo/registry
+/home/*/.cargo/git
+/home/*/.rustup
+/home/*/.nuget/packages
+/home/*/.local/share/mise/installs
+/home/*/.local/share/mise/downloads
+/home/*/.local/share/containers
+
+# Dependencies and build output inside projects
+node_modules
+.venv
+__pycache__
+.next
+.turbo
+
+# T3 Code's per-thread worktrees: the branches live in the repositories
+/home/*/.t3/worktrees
+
+# Package builds and Den Den's own build output
+/src/*/pkg
+*.pkg.tar.zst
+/src/denden/work
+/src/denden/out
+/src/denden/repo

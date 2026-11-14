@@ -3,12 +3,13 @@
 # What an installed Den Den system adds on top of `base`: the agents, the
 # toolchains the user's projects need (with mise for per-project versions),
 # snapshots, the user's GitHub repositories kept in ~/Projects (denden-repos),
-# remote access over Tailscale behind a firewall, and the system contract
+# remote access over Tailscale behind a firewall, backups to the Den Den
+# USB stick (denden-backup), and the system contract
 # agents load (/etc/denden/AGENTS.md).
 
 pkgname=denden-base
 pkgver=0.1.0
-pkgrel=4
+pkgrel=5
 pkgdesc='Den Den base system: agents, toolchains, snapshots and the agent contract'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -33,6 +34,8 @@ depends=(
   'go-yq' 'tmux'
   # Remote access, and a firewall that only lets it in
   'tailscale' 'nftables'
+  # Backups
+  'restic' 'gptfdisk' 'e2fsprogs'
 )
 source=(
   'AGENTS.md'
@@ -46,9 +49,14 @@ source=(
   'firewall.nft'
   'denden-firewall.service'
   'denden-tailscale'
+  'denden-backup'
+  'denden-backup.service'
+  'denden-backup.timer'
+  'denden-backup.rules'
+  'backup-excludes'
 )
 sha256sums=(
-  'c2b86544868d746690f513947b46bf438fee56d805634bf7576b701829ba61af'
+  'fddcb1a41691bbd15bd5ecbd76ffed31bd334dbd8cafcd2e05b11fb164d6d9bf'
   '02f8a1d764a8067db6eb82a203b3a3e164a9a1416a73b2561ff0ace6e4d59135'
   '978a0a07a01ed7f4a3c60b63b3a78fea5964fd158947cd420725967f7bc5cf6c'
   '0d53cceed1c1addd0bf2befdf0b6161c074419f020ce772956cbddde73dd6b3e'
@@ -59,6 +67,11 @@ sha256sums=(
   '485f2083f0ca9e211226e68081582770532f7ef18f63a6726c302471e9551057'
   'dc465fef4a4be91032874d0488c6e206cb0d6ba917a7d9de6987e4b4014538dd'
   'b9026e7925b2cce187ed0d0a54bcff184203c641c313c64640a6d7d8e29ccb46'
+  '9998f870236c03dc04d2a4f635d14d7b584ccbaa6b540b31a0c081abdd1e9c63'
+  'e7dfa67a43c0c1ce2e22e9ae533d73d513d96626a8b512b9244c479e62c07fd2'
+  'f2f830ea0cfaeafac280f08bf33219eb834adc13ed18c76117625029c908a28f'
+  '6263b07b9f5bffe6bce229bd24b29b7fb2ffeb59861caaacfa3818c60926a59c'
+  '9bc6dc77db3a7f734bf3e2fc06d13c3c7fbd0f3341fda5db2f5e22a4a0a946c4'
 )
 
 package() {
@@ -97,4 +110,13 @@ package() {
   install -d "${pkgdir}/usr/lib/systemd/system/multi-user.target.wants"
   ln -s ../denden-firewall.service "${pkgdir}/usr/lib/systemd/system/multi-user.target.wants/denden-firewall.service"
   install -Dm755 denden-tailscale "${pkgdir}/usr/bin/denden-tailscale"
+
+  # Backups to the Den Den USB stick once `denden-backup setup` has run: as
+  # soon as the stick is plugged in, and daily while it is.
+  install -Dm755 denden-backup "${pkgdir}/usr/bin/denden-backup"
+  install -Dm644 backup-excludes "${pkgdir}/usr/share/denden/backup-excludes"
+  install -Dm644 -t "${pkgdir}/usr/lib/systemd/system" denden-backup.service denden-backup.timer
+  install -d "${pkgdir}/usr/lib/systemd/system/timers.target.wants"
+  ln -s ../denden-backup.timer "${pkgdir}/usr/lib/systemd/system/timers.target.wants/denden-backup.timer"
+  install -Dm644 denden-backup.rules "${pkgdir}/usr/lib/udev/rules.d/90-denden-backup.rules"
 }

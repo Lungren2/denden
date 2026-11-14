@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up to the Den Den USB stick daily, when it's plugged in
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
