@@ -6,7 +6,7 @@
 
 pkgname=denden-installer
 pkgver=0.1.0
-pkgrel=3
+pkgrel=4
 pkgdesc='Den Den installer'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -16,7 +16,7 @@ depends=(
   'parted' 'pciutils' 'util-linux'
 )
 source=('denden-install')
-sha256sums=('f91177de60bf7664d5490f85fd3627f99ddcfafdb589c729bf0cd2a34fb89d03')
+sha256sums=('8e40c1fc7632003f4bb9e63c4a6d87e1b6d4762782cfa6acd2acb737dd8fb8d6')
 
 package() {
   install -Dm755 denden-install "${pkgdir}/usr/bin/denden-install"

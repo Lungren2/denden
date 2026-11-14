@@ -200,7 +200,9 @@ fi
 echo "CPU: ${vendor}, CachyOS repos: ${tier:-generic x86-64 only}"
 
 packages=(
-  base linux-cachyos linux-firmware
+  # linux-cachyos-lts is the fallback in the recovery menu, for when an update
+  # to the main kernel won't start.
+  base linux-cachyos linux-cachyos-lts linux-firmware
   btrfs-progs denden-boot
   networkmanager sudo nano vim
   cachyos-keyring cachyos-mirrorlist
@@ -221,7 +223,7 @@ if grep -q '\[10de:' <<<"${gpus}"; then
   # back to nouveau.
   device=$(grep -o '\[10de:[0-9a-f]\{4\}\]' <<<"${gpus}" | head -n1 | cut -c7-10)
   if (( 16#${device} >= 16#1e00 )); then
-    packages+=(linux-cachyos-nvidia-open nvidia-utils)
+    packages+=(linux-cachyos-nvidia-open linux-cachyos-lts-nvidia-open nvidia-utils)
     nvidia=1
   else
     echo "warning: this NVIDIA GPU predates the open driver; using nouveau"

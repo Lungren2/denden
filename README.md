@@ -109,8 +109,8 @@ It creates a 4 GiB boot partition and a Btrfs partition with the subvolumes
 The computer then starts with a picker showing Den Den and, if Windows is on
 any disk, Windows (it remembers the last choice; with Den Den alone it goes
 straight on), then a splash until the desktop is up. Root snapshots are taken
-around every pacman transaction; to boot one, hold a key as Den Den starts to
-show the recovery menu. If Windows goes on another disk later, run
+around every pacman transaction; to boot one, or the fallback LTS kernel, hold
+a key as Den Den starts to show the recovery menu. If Windows goes on another disk later, run
 `sudo denden-boot-update` to add it to the picker.
 
 ## License
