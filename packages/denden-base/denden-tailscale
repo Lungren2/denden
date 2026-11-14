@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Put this machine on your Tailscale network: sign in through the browser,
+# let you manage Tailscale without sudo afterwards, and accept SSH from your
+# other devices over Tailscale (the firewall refuses it from anywhere else).
+#
+#   denden-tailscale [extra `tailscale up` options]
+set -euo pipefail
+
+sudo systemctl enable --now tailscaled.service
+sudo tailscale up --operator="$(id -un)" --ssh "$@"
+echo
+tailscale status --self --peers=false

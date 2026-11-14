@@ -1,0 +1,14 @@
+[Unit]
+Description=Den Den firewall: refuse inbound connections except over Tailscale
+Documentation=file:///usr/share/denden/firewall.nft
+Wants=network-pre.target
+Before=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/nft -f /usr/share/denden/firewall.nft
+ExecStop=/usr/bin/nft delete table inet denden_firewall
+
+[Install]
+WantedBy=multi-user.target

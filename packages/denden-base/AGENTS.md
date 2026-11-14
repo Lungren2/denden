@@ -14,7 +14,13 @@ Read it before changing anything outside your project.
   `snapper -c root list` show them, and the recovery menu (hold a key as Den
   Den starts) can boot any root snapshot.
 - Toolchains: Node (npm, pnpm), Bun, Rust, Python (`uv`), .NET, and Docker
-  with Compose and Buildx. The user is in the `docker` group.
+  with Compose and Buildx. The user is in the `docker` group. A project that
+  needs other versions pins them in its `mise.toml` (`mise use node@22`);
+  mise's shims are on `PATH` ahead of the system's, so pinned versions win
+  inside that project.
+- Inbound network connections are refused except over Tailscale. To expose a
+  dev server to the user's other devices, bind it and give them the
+  machine's Tailscale address (`tailscale ip`); don't open firewall ports.
 - You run as the user. `sudo` works without a password.
 - The user's GitHub repositories are in `~/Projects` (their own as
   `~/Projects/<repo>`, an organisation's as `~/Projects/<org>/<repo>`).

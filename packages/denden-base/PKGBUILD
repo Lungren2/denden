@@ -1,13 +1,14 @@
 # Maintainer: Ethan <ethanogle012@outlook.com>
 #
 # What an installed Den Den system adds on top of `base`: the agents, the
-# toolchains the user's projects need, snapshots, the user's GitHub
-# repositories kept in ~/Projects (denden-repos), and the system contract
+# toolchains the user's projects need (with mise for per-project versions),
+# snapshots, the user's GitHub repositories kept in ~/Projects (denden-repos),
+# remote access over Tailscale behind a firewall, and the system contract
 # agents load (/etc/denden/AGENTS.md).
 
 pkgname=denden-base
 pkgver=0.1.0
-pkgrel=3
+pkgrel=4
 pkgdesc='Den Den base system: agents, toolchains, snapshots and the agent contract'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -19,24 +20,45 @@ depends=(
   'base-devel' 'devtools' 'git' 'github-cli' 'expac'
   # Toolchains
   'nodejs' 'npm' 'pnpm' 'bun' 'rust' 'python' 'uv' 'dotnet-sdk'
+  # Per-project tool versions (a project's mise.toml)
+  'mise'
   # Containers
   'docker' 'docker-compose' 'docker-buildx'
   # Snapshots and sandboxing
   'btrfs-progs' 'snapper' 'snap-pac' 'bubblewrap'
   # Tools agents reach for
   'ripgrep' 'fd' 'jq' 'openssh' 'man-db' 'less'
+  # Terminal tools
+  'fzf' 'zoxide' 'lazygit' 'git-delta' 'btop' 'dust' 'duf' 'hyperfine'
+  'go-yq' 'tmux'
+  # Remote access, and a firewall that only lets it in
+  'tailscale' 'nftables'
 )
 source=(
   'AGENTS.md'
   'denden-repos'
   'denden-repos.service'
   'denden-repos.timer'
+  'profile.sh'
+  'environment.conf'
+  'gitconfig'
+  'logind.conf'
+  'firewall.nft'
+  'denden-firewall.service'
+  'denden-tailscale'
 )
 sha256sums=(
-  '7354cbbc332d2bf4d75367c3b257ed632874e2fbbe31200153b72ad0ecb73b89'
+  'c2b86544868d746690f513947b46bf438fee56d805634bf7576b701829ba61af'
   '02f8a1d764a8067db6eb82a203b3a3e164a9a1416a73b2561ff0ace6e4d59135'
   '978a0a07a01ed7f4a3c60b63b3a78fea5964fd158947cd420725967f7bc5cf6c'
   '0d53cceed1c1addd0bf2befdf0b6161c074419f020ce772956cbddde73dd6b3e'
+  'bee84b40557982e302ca7d506abdacab47fc64998ddec456492f89ceb6798b3a'
+  'eda981231171281805468a8790615baffd3e384ba8b98afdc1b64c2e6f85866c'
+  'd4d79c520faff353f736621fc894c03e0e09bf2ed748e2c38800c36610025246'
+  'b8d65422a3618d528703f54ebae7c1b9d5be87b98a1ae72a17fe6dfba0c1339f'
+  '485f2083f0ca9e211226e68081582770532f7ef18f63a6726c302471e9551057'
+  'dc465fef4a4be91032874d0488c6e206cb0d6ba917a7d9de6987e4b4014538dd'
+  'b9026e7925b2cce187ed0d0a54bcff184203c641c313c64640a6d7d8e29ccb46'
 )
 
 package() {
@@ -56,4 +78,23 @@ package() {
   install -Dm644 -t "${pkgdir}/usr/lib/systemd/user" denden-repos.service denden-repos.timer
   install -d "${pkgdir}/usr/lib/systemd/user/timers.target.wants"
   ln -s ../denden-repos.timer "${pkgdir}/usr/lib/systemd/user/timers.target.wants/denden-repos.timer"
+
+  # One PATH for login shells and the user's services: ~/.local/bin, then
+  # mise's shims, then the system. Plus zoxide and fzf in interactive bash.
+  install -Dm644 profile.sh "${pkgdir}/etc/profile.d/denden.sh"
+  install -Dm644 environment.conf "${pkgdir}/usr/lib/environment.d/50-denden.conf"
+
+  # git shows diffs through delta, and a few safer defaults.
+  install -Dm644 gitconfig "${pkgdir}/etc/gitconfig"
+
+  # Keep running with the lid shut on AC power.
+  install -Dm644 logind.conf "${pkgdir}/usr/lib/systemd/logind.conf.d/50-denden.conf"
+
+  # Inbound connections only over Tailscale; the firewall is on for every
+  # boot. denden-tailscale signs the machine in to Tailscale.
+  install -Dm644 firewall.nft "${pkgdir}/usr/share/denden/firewall.nft"
+  install -Dm644 denden-firewall.service "${pkgdir}/usr/lib/systemd/system/denden-firewall.service"
+  install -d "${pkgdir}/usr/lib/systemd/system/multi-user.target.wants"
+  ln -s ../denden-firewall.service "${pkgdir}/usr/lib/systemd/system/multi-user.target.wants/denden-firewall.service"
+  install -Dm755 denden-tailscale "${pkgdir}/usr/bin/denden-tailscale"
 }
