@@ -9,7 +9,7 @@
 
 pkgname=denden-base
 pkgver=0.1.0
-pkgrel=5
+pkgrel=6
 pkgdesc='Den Den base system: agents, toolchains, snapshots and the agent contract'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -39,6 +39,7 @@ depends=(
 )
 source=(
   'AGENTS.md'
+  'agents.tmpfiles'
   'denden-repos'
   'denden-repos.service'
   'denden-repos.timer'
@@ -56,7 +57,8 @@ source=(
   'backup-excludes'
 )
 sha256sums=(
-  'fddcb1a41691bbd15bd5ecbd76ffed31bd334dbd8cafcd2e05b11fb164d6d9bf'
+  'aac968d0bb574be4da1026146211919450eea991d0d8157bbacc293f30900a05'
+  'dc2944dfeb9ad41503d14c76bcb308e2fa6355ec4bdf891914c99f4bb014217f'
   '02f8a1d764a8067db6eb82a203b3a3e164a9a1416a73b2561ff0ace6e4d59135'
   '978a0a07a01ed7f4a3c60b63b3a78fea5964fd158947cd420725967f7bc5cf6c'
   '0d53cceed1c1addd0bf2befdf0b6161c074419f020ce772956cbddde73dd6b3e'
@@ -81,9 +83,13 @@ package() {
   install -d "${pkgdir}/etc/claude-code"
   ln -s ../denden/AGENTS.md "${pkgdir}/etc/claude-code/CLAUDE.md"
 
-  # Codex reads ~/.codex/AGENTS.md, so every new user gets it linked.
-  install -d "${pkgdir}/etc/skel/.codex"
-  ln -s /etc/denden/AGENTS.md "${pkgdir}/etc/skel/.codex/AGENTS.md"
+  # Codex reads ~/.codex/AGENTS.md, so every user, existing ones included,
+  # gets it linked at login.
+  install -Dm644 agents.tmpfiles "${pkgdir}/usr/share/user-tmpfiles.d/denden-agents.conf"
+  # systemd ships the user tmpfiles service that applies it, but Arch doesn't
+  # turn it on.
+  install -d "${pkgdir}/usr/lib/systemd/user/basic.target.wants"
+  ln -s ../systemd-tmpfiles-setup.service "${pkgdir}/usr/lib/systemd/user/basic.target.wants/systemd-tmpfiles-setup.service"
 
   # The user's GitHub repositories in ~/Projects, refreshed hourly once
   # they've signed in. The timer is on for every user.

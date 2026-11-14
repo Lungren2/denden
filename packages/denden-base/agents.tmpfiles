@@ -1,0 +1,4 @@
+# Every user's Codex loads Den Den's system contract (/etc/denden/AGENTS.md)
+# as its own instructions. Created at login; a file the user already has is
+# left alone. (Claude Code reads it through /etc/claude-code/CLAUDE.md.)
+L %h/.codex/AGENTS.md - - - - /etc/denden/AGENTS.md
