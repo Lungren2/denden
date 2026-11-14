@@ -1,0 +1,6 @@
+[Unit]
+Description=Remind the user when backups are overdue
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/denden-backup-reminder

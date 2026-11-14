@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Set up backups
+Comment=Back up your files to the Den Den USB stick
+Exec=foot --title "Set up backups" sh -c "denden-backup setup; echo; read -rp 'Press Enter to close.' _"
+Icon=drive-removable-media
+Terminal=false
+Categories=System;

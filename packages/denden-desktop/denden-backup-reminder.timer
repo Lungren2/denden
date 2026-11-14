@@ -1,0 +1,9 @@
+[Unit]
+Description=Remind the user when backups are overdue, after login and daily
+
+[Timer]
+OnStartupSec=10min
+OnUnitActiveSec=1d
+
+[Install]
+WantedBy=timers.target

@@ -11,7 +11,7 @@
 
 pkgname=denden-desktop
 pkgver=0.1.0
-pkgrel=4
+pkgrel=5
 pkgdesc='Den Den desktop: a Niri session with T3 Code as the main window'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -27,6 +27,8 @@ depends=(
   # Apps the taskbar pins, the clipboard, and the Secret Service T3 Code
   # keeps credentials in
   'foot' 'nautilus' 'wl-clipboard' 'gnome-keyring'
+  # Reminders sent as notifications
+  'libnotify'
   # GTK apps in the dark theme
   'adw-gtk-theme' 'dconf'
   # Audio, and the microphone T3 Code's voice input uses
@@ -47,6 +49,10 @@ source=(
   'dconf-denden'
   'denden-github.desktop'
   'denden-tailscale.desktop'
+  'denden-backup.desktop'
+  'denden-backup-reminder'
+  'denden-backup-reminder.service'
+  'denden-backup-reminder.timer'
   '50-niri-limit-free-buffer-pool.json'
 )
 sha256sums=(
@@ -58,6 +64,10 @@ sha256sums=(
   '4af02bb4a6365e718a30283d4c2fd11d124af6d8ecca48f695e4690e1e2e0beb'
   'd7264ecd5a448c88895e21a3d20e9b1b4015cec3123b8e330f77e1d31d640053'
   '44f51a68ab32ab19c89ae24e2e22ba6b57cc37a17b63edd331cf6366b02b1022'
+  '376f9847aacd5b8e706304e45e8ba533c8f57141d04297aa6556ac8c2a6309fb'
+  'bae6b5b75817c78a88db47b1f47ee72cf99baed9dcbaed7751a1a021064981d9'
+  'fb767feba341e68d6df7c9ab5cdd76fd8cf674dcb01466db52b1f6400b1d9b0c'
+  '283c340df053b9cabf2fdd76356f08e687a828aeabe5d29d486ece0a2c092be4'
   '1a04a9eb0e51c8eba4f06373c9e514012417f01295d4938ed0635932fb24cd47'
 )
 
@@ -76,6 +86,14 @@ package() {
 
   # And one to put the machine on the user's Tailscale network.
   install -Dm644 denden-tailscale.desktop "${pkgdir}/usr/share/applications/denden-tailscale.desktop"
+
+  # Backups: a launcher entry to set them up on the Den Den stick, and a
+  # reminder when the last one is more than three days old.
+  install -Dm644 denden-backup.desktop "${pkgdir}/usr/share/applications/denden-backup.desktop"
+  install -Dm755 denden-backup-reminder "${pkgdir}/usr/bin/denden-backup-reminder"
+  install -Dm644 -t "${pkgdir}/usr/lib/systemd/user" denden-backup-reminder.service denden-backup-reminder.timer
+  install -d "${pkgdir}/usr/lib/systemd/user/timers.target.wants"
+  ln -s ../denden-backup-reminder.timer "${pkgdir}/usr/lib/systemd/user/timers.target.wants/denden-backup-reminder.timer"
 
   # Helium opens web links and pages; Files opens folders.
   install -Dm644 mimeapps.list "${pkgdir}/etc/xdg/mimeapps.list"
