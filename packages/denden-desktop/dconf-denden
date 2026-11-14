@@ -1,0 +1,5 @@
+# Den Den's defaults for GTK apps (Files, Helium's dialogs, settings): dark,
+# matching the desktop. A user's own settings override these.
+[org/gnome/desktop/interface]
+color-scheme='prefer-dark'
+gtk-theme='adw-gtk3-dark'

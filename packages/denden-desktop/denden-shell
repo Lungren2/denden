@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Start Noctalia, the desktop shell, with Den Den's look. Niri runs this at
+# login.
+#
+# Noctalia only reads config from the user's own directory, so link Den Den's
+# palette there and include Den Den's settings from the user's config.toml.
+# The user's config and Noctalia's Settings still override them.
+set -u
+
+share=/usr/share/denden/noctalia
+config="${XDG_CONFIG_HOME:-${HOME}/.config}/noctalia"
+
+mkdir -p -- "${config}/palettes"
+ln -sfn -- "${share}/DenDen.json" "${config}/palettes/DenDen.json"
+if [[ ! -e ${config}/config.toml ]]; then
+  cat > "${config}/config.toml" <<EOF
+# Your Noctalia settings. Den Den's are included first, so anything set below
+# replaces them. Reference: https://docs.noctalia.dev/noctalia/
+[include]
+files = ["${share}/denden.toml"]
+EOF
+fi
+
+# The terminal follows the same palette. Noctalia writes the theme file, but
+# won't create foot.ini while foot's system-wide one exists.
+foot_ini="${XDG_CONFIG_HOME:-${HOME}/.config}/foot/foot.ini"
+if [[ ! -e ${foot_ini} ]]; then
+  mkdir -p -- "$(dirname -- "${foot_ini}")"
+  cat > "${foot_ini}" <<EOF
+[main]
+include=${XDG_CONFIG_HOME:-${HOME}/.config}/foot/themes/noctalia
+font=monospace:size=11
+pad=12x10
+EOF
+fi
+
+exec noctalia "$@"

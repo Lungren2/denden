@@ -113,6 +113,14 @@ around every pacman transaction; to boot one, or the fallback LTS kernel, hold
 a key as Den Den starts to show the recovery menu. If Windows goes on another disk later, run
 `sudo denden-boot-update` to add it to the picker.
 
+The desktop is Niri with a taskbar from [Noctalia](https://github.com/noctalia-dev/noctalia):
+the Den Den mark opens the launcher (also Super+Space), quick settings for
+Wi-Fi, Bluetooth and sound are on the right (Super+S), and Settings is
+Super+Comma. T3 Code opens maximized at login; Super+Shift+Slash lists every
+shortcut. Open **Sign in to GitHub** from the launcher once, and every
+repository you own or that your organisations own is cloned into
+`~/Projects` and kept up to date hourly (`denden-repos`).
+
 ## License
 
 Original work in this repo is licensed under the [MIT License](LICENSE).

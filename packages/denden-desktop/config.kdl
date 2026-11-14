@@ -1,7 +1,8 @@
-// Den Den desktop. T3 Code is the desktop: it opens maximized at login, with
-// no bar, gaps or borders. Anything else you open (a browser for a sign-in,
-// Godot, Blender, a terminal) opens as a new column beside it; Mod+Home
-// brings you back. Mod is the Super (Windows) key.
+// Den Den desktop. T3 Code opens maximized at login above a taskbar
+// (Noctalia): the Den Den mark opens the launcher, your apps sit beside it,
+// status and the clock are on the right. Anything else you open becomes a
+// column beside T3 Code; Mod+Home brings you back. Mod is the Super
+// (Windows) key; Mod+Shift+Slash lists every shortcut.
 //
 // To customize, copy this file to ~/.config/niri/config.kdl and edit it.
 // Reference: https://github.com/YaLTeR/niri/wiki/Configuration:-Introduction
@@ -33,9 +34,11 @@ hotkey-overlay {
 }
 
 layout {
-    gaps 0
+    gaps 8
     center-focused-column "never"
     default-column-width { proportion 0.5; }
+    // Noctalia draws the wallpaper behind the windows.
+    background-color "transparent"
     focus-ring {
         off
     }
@@ -44,9 +47,14 @@ layout {
     }
 }
 
+window-rule {
+    geometry-corner-radius 12
+    clip-to-geometry true
+}
+
 screenshot-path "~/Pictures/Screenshots/%Y-%m-%d %H-%M-%S.png"
 
-spawn-at-startup "mako"
+spawn-at-startup "denden-shell"
 spawn-at-startup "t3code"
 
 window-rule {
@@ -54,13 +62,39 @@ window-rule {
     open-maximized true
 }
 
+// Noctalia's Settings window floats over the desktop.
+window-rule {
+    match app-id="^dev\\.noctalia\\.Noctalia$"
+    open-floating true
+    default-column-width { fixed 1080; }
+    default-window-height { fixed 860; }
+}
+
+// The wallpaper also fills the background of the overview (Mod+O).
+layer-rule {
+    match namespace="^noctalia-wallpaper"
+    place-within-backdrop true
+}
+
+// Lets notification actions bring their app's window forward.
+debug {
+    honor-xdg-activation-with-invalid-serial
+}
+
 binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
+    Mod+Space hotkey-overlay-title="Open the launcher" { spawn-sh "noctalia msg panel-toggle launcher"; }
+    Mod+D { spawn-sh "noctalia msg panel-toggle launcher"; }
+    Mod+S hotkey-overlay-title="Quick settings" { spawn-sh "noctalia msg panel-toggle control-center"; }
+    Mod+Comma hotkey-overlay-title="Settings" { spawn-sh "noctalia msg settings-toggle"; }
     Mod+Return hotkey-overlay-title="Open a terminal" { spawn "foot"; }
-    Mod+D hotkey-overlay-title="Run an application" { spawn "fuzzel"; }
     Mod+T hotkey-overlay-title="Open T3 Code" { spawn "t3code"; }
+    Mod+B hotkey-overlay-title="Open Helium" { spawn "helium-browser"; }
+    Mod+E hotkey-overlay-title="Open Files" { spawn "nautilus" "--new-window"; }
     Mod+Q { close-window; }
+    Alt+Tab { spawn-sh "noctalia msg window-switcher hold"; }
+    Alt+Shift+Tab { spawn-sh "noctalia msg window-switcher hold reverse"; }
 
     Mod+Home { focus-column-first; }
     Mod+End { focus-column-last; }
@@ -94,13 +128,19 @@ binds {
     Ctrl+Print { screenshot-screen; }
     Alt+Print { screenshot-window; }
 
-    XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.05+" "-l" "1.0"; }
-    XF86AudioLowerVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.05-"; }
-    XF86AudioMute allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
-    XF86AudioMicMute allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "noctalia msg volume-up"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "noctalia msg volume-down"; }
+    XF86AudioMute allow-when-locked=true { spawn-sh "noctalia msg volume-mute"; }
+    XF86AudioMicMute allow-when-locked=true { spawn-sh "noctalia msg mic-mute"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn-sh "noctalia msg brightness-up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "noctalia msg brightness-down"; }
+    XF86AudioPlay allow-when-locked=true { spawn-sh "noctalia msg media toggle"; }
+    XF86AudioNext allow-when-locked=true { spawn-sh "noctalia msg media next"; }
+    XF86AudioPrev allow-when-locked=true { spawn-sh "noctalia msg media previous"; }
 
+    Mod+Alt+L hotkey-overlay-title="Lock the screen" { spawn-sh "noctalia msg session lock"; }
     Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
     Mod+Shift+P { power-off-monitors; }
     Mod+Shift+E { quit; }
-    Ctrl+Alt+Delete { quit; }
+    Ctrl+Alt+Delete { spawn-sh "noctalia msg panel-toggle session"; }
 }

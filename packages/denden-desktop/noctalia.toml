@@ -1,0 +1,96 @@
+# Den Den's look for Noctalia, the desktop shell (taskbar, launcher, control
+# center, notifications, wallpaper). denden-shell includes this file from
+# ~/.config/noctalia/config.toml, so anything set there wins, and so does
+# whatever you change in Noctalia's Settings.
+
+[shell]
+polkit_agent = true                 # password prompts as dialogs, not terminals
+corner_radius_scale = 0.8
+telemetry_enabled = false
+setup_wizard_enabled = false      # Den Den has already made these choices
+
+[shell.panel]
+transparency_mode = "soft"
+launcher_placement = "floating"
+launcher_position = "center"
+
+[shell.launcher]
+pinned = ["t3code", "helium", "org.gnome.Nautilus", "foot"]
+default_view = "pinned"
+
+[shell.window_switcher]
+style = "carousel"
+mru = true
+
+[theme]
+mode = "dark"
+source = "custom"
+custom_palette = "DenDen"
+
+# The terminal and GTK apps (Files, dialogs) take the same colours.
+[theme.templates]
+builtin_ids = ["foot", "gtk3", "gtk4"]
+
+[wallpaper]
+fill_mode = "crop"
+transition = ["fade"]
+transition_duration = 600
+
+[wallpaper.default]
+path = "/usr/share/denden/boot/theme/background.png"
+
+[lockscreen]
+transition = ["fade"]
+transition_duration = 400
+
+[idle.behavior.screen-off]
+timeout = 900
+action = "screen_off"
+enabled = true
+
+# One bar along the bottom, like a taskbar: the Den Den mark opens the
+# launcher, then your apps; status, notifications and the clock on the right.
+[bar.main]
+position = "bottom"
+thickness = 44
+background_opacity = 0.9
+compositor_blur = true
+radius = 12
+margin_ends = 8
+margin_edge = 8
+padding = 10
+widget_spacing = 4
+shadow = true
+start = ["launcher", "taskbar"]
+center = []
+end = ["tray", "media", "network", "bluetooth", "volume", "brightness", "battery", "notifications", "clock", "control-center"]
+
+[widget.launcher]
+custom_image = "/usr/share/denden/boot/mushi.svg"
+custom_image_colorize = true
+
+[widget.taskbar]
+pinned = ["t3code", "helium", "org.gnome.Nautilus", "foot"]
+pinned_opacity = 0.55
+icon_scale = 1.1
+item_spacing = 6
+
+[widget.media]
+hide_when_no_media = true
+hide_when_idle = true
+
+[widget.clock]
+format = "{:%H:%M}\n{:%a %-d %b}"
+
+[dock]
+enabled = false
+
+[notification]
+offset_x = 12
+offset_y = 12
+
+[osd]
+position = "bottom_center"
+
+[osd.kinds]
+lock_keys = false                   # no popup for Num Lock at every login

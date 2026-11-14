@@ -61,6 +61,14 @@ What the machine needs before it is the one you work on every day.
   starts at boot without a login (`t3 service install`), paired with T3
   Connect; Tailscale for SSH and direct routes; inbound traffic refused except
   over Tailscale
+- [x] A desktop shell (Noctalia) in Den Den's colours: taskbar with pinned
+  apps, launcher, quick settings, notifications, password dialogs, the startup
+  background as wallpaper; Files (Nautilus); GTK apps and the terminal themed
+  to match
+- [x] Your GitHub repositories, and your organisations', cloned into
+  `~/Projects` and fast-forwarded hourly (`denden-repos`) after one sign-in
+  from the launcher
+- [ ] A setup wizard for the GitHub sign-in and the other first-run choices
 - [ ] Agent CLIs found from a non-interactive login shell, which is what T3
   Code's background service uses
 - [ ] Per-project runtimes with mise (a project's `mise.toml` wins over the
