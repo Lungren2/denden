@@ -1,0 +1,8 @@
+# Den Den's default applications. A user's ~/.config/mimeapps.list overrides
+# these, entry by entry.
+[Default Applications]
+text/html=helium.desktop
+application/xhtml+xml=helium.desktop
+application/pdf=helium.desktop
+x-scheme-handler/http=helium.desktop
+x-scheme-handler/https=helium.desktop

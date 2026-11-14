@@ -49,10 +49,13 @@ sudo. Snapshots before every pacman transaction are the safety net, and
 
 ## 2. Daily driver
 What the machine needs before it is the one you work on every day.
-- [ ] Microsoft Edge as the default browser (`microsoft-edge-stable-bin`: no
-  public source), Helium as the alternative (from source, prebuilt kept as
-  `-bin`); Firefox removed
-- [ ] `linux-cachyos-lts` beside `linux-cachyos`, as the fallback kernel in
+- [x] Helium as the default browser (`helium-browser-bin` from CachyOS), which
+  sign-ins from agents and CLIs open in too; Firefox removed
+- [ ] Helium built from source (a Chromium build), the prebuilt kept as `-bin`
+- [ ] Microsoft Edge as the alternative (`microsoft-edge-stable-bin`: no public
+  source), once packages built here update themselves: a browser can't sit on
+  a pinned version
+- [x] `linux-cachyos-lts` beside `linux-cachyos`, as the fallback kernel in
   the recovery menu
 - [ ] Reachable from anywhere: T3 Code's server runs as a user service that
   starts at boot without a login (`t3 service install`), paired with T3

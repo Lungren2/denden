@@ -10,7 +10,7 @@
 
 pkgname=denden-desktop
 pkgver=0.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Den Den desktop: a Niri session with T3 Code as the desktop'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -25,24 +25,30 @@ depends=(
   'foot' 'fuzzel' 'mako' 'gnome-keyring'
   # Audio, and the microphone T3 Code's voice input uses
   'pipewire' 'pipewire-pulse' 'pipewire-alsa' 'wireplumber'
-  # Sign-ins that agents and CLIs open in a browser
-  'firefox'
+  # The browser, which sign-ins from agents and CLIs open in too. Prebuilt
+  # from CachyOS for now; a source build is on the roadmap.
+  'helium-browser-bin'
   'noto-fonts' 'noto-fonts-emoji'
   # Tools the user's projects need
   'godot' 'blender'
 )
 source=(
   'config.kdl'
+  'mimeapps.list'
   '50-niri-limit-free-buffer-pool.json'
 )
 sha256sums=(
   'bb5e3b19fa0594c8e93251bca202c3f0a5bc014f53eccb6dac6e4aea077729df'
+  '53f53fce66baf6ff2159f03b2c84a025b417e286bf0b43828d6a162a2180c06d'
   '1a04a9eb0e51c8eba4f06373c9e514012417f01295d4938ed0635932fb24cd47'
 )
 
 package() {
   # Niri's system-wide config; a user's ~/.config/niri/config.kdl replaces it.
   install -Dm644 config.kdl "${pkgdir}/etc/niri/config.kdl"
+
+  # Helium opens web links and pages.
+  install -Dm644 mimeapps.list "${pkgdir}/etc/xdg/mimeapps.list"
 
   # On NVIDIA, stop the driver from holding on to freed buffers in niri,
   # which otherwise grows its VRAM use to gigabytes. Inert on other GPUs.
