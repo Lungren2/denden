@@ -121,6 +121,11 @@ shortcut. Open **Sign in to GitHub** from the launcher once, and every
 repository you own or that your organisations own is cloned into
 `~/Projects` and kept up to date hourly (`denden-repos`).
 
+To reach the machine from your other devices, open **Connect to Tailscale**
+from the launcher (it also allows SSH over Tailscale) and sign in to T3
+Connect in T3 Code's settings. The firewall refuses every other inbound
+connection. Projects can pin their own tool versions in a `mise.toml`.
+
 ## License
 
 Original work in this repo is licensed under the [MIT License](LICENSE).

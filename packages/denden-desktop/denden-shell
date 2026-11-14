@@ -30,6 +30,7 @@ if [[ ! -e ${foot_ini} ]]; then
 [main]
 include=${XDG_CONFIG_HOME:-${HOME}/.config}/foot/themes/noctalia
 font=monospace:size=11
+login-shell=yes
 pad=12x10
 EOF
 fi

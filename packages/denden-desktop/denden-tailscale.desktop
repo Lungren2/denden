@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Connect to Tailscale
+Comment=Reach this computer from your other devices
+Exec=foot --title "Connect to Tailscale" sh -c "denden-tailscale; echo; read -rp 'Press Enter to close.' _"
+Icon=network-vpn
+Terminal=false
+Categories=Network;

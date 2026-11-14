@@ -57,10 +57,11 @@ What the machine needs before it is the one you work on every day.
   a pinned version
 - [x] `linux-cachyos-lts` beside `linux-cachyos`, as the fallback kernel in
   the recovery menu
-- [ ] Reachable from anywhere: T3 Code's server runs as a user service that
-  starts at boot without a login (`t3 service install`), paired with T3
-  Connect; Tailscale for SSH and direct routes; inbound traffic refused except
-  over Tailscale
+- [x] Reachable from anywhere: T3 Connect through the desktop app's own
+  server (T3 lets one server own its data, so a background `t3 service`
+  would lock the desktop app out; the app starts at login instead);
+  Tailscale with SSH, from a launcher entry (`denden-tailscale`); inbound
+  connections refused except over Tailscale (`denden-firewall`)
 - [x] A desktop shell (Noctalia) in Den Den's colours: taskbar with pinned
   apps, launcher, quick settings, notifications, password dialogs, the startup
   background as wallpaper; Files (Nautilus); GTK apps and the terminal themed
@@ -69,16 +70,17 @@ What the machine needs before it is the one you work on every day.
   `~/Projects` and fast-forwarded hourly (`denden-repos`) after one sign-in
   from the launcher
 - [ ] A setup wizard for the GitHub sign-in and the other first-run choices
-- [ ] Agent CLIs found from a non-interactive login shell, which is what T3
-  Code's background service uses
-- [ ] Per-project runtimes with mise (a project's `mise.toml` wins over the
+- [x] Agent CLIs found from a non-interactive login shell, and from the
+  desktop session: `~/.local/bin` and mise's shims on every `PATH`
+- [x] Per-project runtimes with mise (a project's `mise.toml` wins over the
   system toolchains)
-- [ ] Terminal tools: fzf, zoxide, lazygit, git-delta, btop, dust, duf,
-  hyperfine, yq, tmux
+- [x] Terminal tools: fzf, zoxide, lazygit, git-delta (git's pager), btop,
+  dust, duf, hyperfine, yq, tmux
 - [ ] Backups with restic of `/home`, `/src` and T3 Code's state
   (`~/.t3/userdata`), leaving out caches, worktrees and Docker; a restore
   tested, not just a backup
-- [ ] Stays awake on AC power, so remote sessions don't vanish
+- [x] Stays awake on AC power, lid shut or not, so remote sessions don't
+  vanish
 
 ## 3. Local source
 - [ ] `/src` tree; this repo at `/src/denden`

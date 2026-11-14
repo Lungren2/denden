@@ -11,7 +11,7 @@
 
 pkgname=denden-desktop
 pkgver=0.1.0
-pkgrel=3
+pkgrel=4
 pkgdesc='Den Den desktop: a Niri session with T3 Code as the main window'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -46,16 +46,18 @@ source=(
   'mimeapps.list'
   'dconf-denden'
   'denden-github.desktop'
+  'denden-tailscale.desktop'
   '50-niri-limit-free-buffer-pool.json'
 )
 sha256sums=(
   '2be2ab4ee15e0f1e40aebd612f1ed7f0094725a3d7c22c4da43e738b9015cda7'
-  '4ae16d96dc88229e05462da95aba6ee31ceae8b91cc6b163361a552ae0e8e084'
+  '406af170d75bc8173d74e62d8b145fb8c5850e31f3144891a0120fa070e8b870'
   '762d708cf97e502d4eccff7c4b4ce42ef4b953176a5c993bc7b9c5a431f8b120'
   'daba5531decf23aa3008a81ed9a1678443f146385f3064682de219adc004d7ae'
   '1be143020d6d0c0ad89c28e1c85a8fd045bb68568b5eb93cdb1824ff75f9c665'
   '4af02bb4a6365e718a30283d4c2fd11d124af6d8ecca48f695e4690e1e2e0beb'
   'd7264ecd5a448c88895e21a3d20e9b1b4015cec3123b8e330f77e1d31d640053'
+  '44f51a68ab32ab19c89ae24e2e22ba6b57cc37a17b63edd331cf6366b02b1022'
   '1a04a9eb0e51c8eba4f06373c9e514012417f01295d4938ed0635932fb24cd47'
 )
 
@@ -71,6 +73,9 @@ package() {
   # A launcher entry to sign in to GitHub, after which denden-repos (from
   # denden-base) brings the user's repositories into ~/Projects.
   install -Dm644 denden-github.desktop "${pkgdir}/usr/share/applications/denden-github.desktop"
+
+  # And one to put the machine on the user's Tailscale network.
+  install -Dm644 denden-tailscale.desktop "${pkgdir}/usr/share/applications/denden-tailscale.desktop"
 
   # Helium opens web links and pages; Files opens folders.
   install -Dm644 mimeapps.list "${pkgdir}/etc/xdg/mimeapps.list"
