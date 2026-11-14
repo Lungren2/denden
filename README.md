@@ -76,21 +76,31 @@ script shuts the VM down cleanly for that.
 
 ## Flashing
 
-WSL can't see USB drives directly, so write the ISO from Windows. `scripts/flash.ps1`
-keeps a stick's backup partition and replaces only the image (`-Erase` wipes
-everything). The ISO is
-reachable at `\\wsl$\archlinux\home\<user>\denden\out\`.
+From Linux (Den Den itself, or any Arch system), `scripts/flash.sh` writes the
+ISO byte for byte and verifies it by SHA-256. Find the stick by model and bus,
+not by name alone:
 
-`scripts/flash.ps1` wipes a USB disk, writes the ISO in DD mode and verifies it
-by SHA-256. Run it from an elevated PowerShell; it refuses non-USB and boot
-disks and asks you to type `ERASE` first:
+```sh
+lsblk -o NAME,MODEL,TRAN,SIZE
+scripts/flash.sh out/denden-<date>-x86_64.iso /dev/sdX
+```
+
+It refuses anything that isn't a whole USB disk, or that has a mounted
+partition, and asks you to type a word first. A stick that holds backups
+(`denden-backup setup`) keeps them: only the image is replaced, and the
+DENDEN_DATA partition is put back into the new partition table (`--erase`
+wipes everything). It can also write to a disk image file, for testing.
+
+From Windows (WSL can't see USB drives directly), `scripts/flash.ps1` does the
+same, and `-Erase` wipes everything. Run it from an elevated PowerShell; the
+ISO is reachable at `\\wsl$\archlinux\home\<user>\denden\out\`:
 
 ```powershell
 Get-Disk   # note the USB disk's Number
 pwsh -ExecutionPolicy Bypass -File .\scripts\flash.ps1 -IsoPath <iso> -DiskNumber <n>
 ```
 
-Rufus (DD mode) or balenaEtcher work too.
+Rufus (DD mode) or balenaEtcher work too, but they erase the backups.
 
 ## Installing
 
