@@ -23,6 +23,12 @@ profiles, recovery) serves that.
    source on the machine: the exact installed version, as a git repo, next to
    the recipe that builds it. Changing any part of the system is *edit →
    rebuild → installed*, and the change survives updates.
+7. **A product, not a distro.** The defaults are what this person's computer
+   should contain, not what a Linux desktop usually ships. Screens a person
+   sees look like a product; the technical depth stays one request away.
+8. **The machine is disposable; the environment isn't.** A machine is rebuilt
+   from a recipe plus restored state, never cloned, and agents never get your
+   own desktop, mouse or keyboard: each one works on a desktop of its own.
 
 ## What agents actually consume
 
@@ -156,17 +162,26 @@ tools.
 
 ## Milestones
 
+The checklist is in [ROADMAP.md](ROADMAP.md).
+
 1. **Agent-ready base:** agent tooling and the dev toolchain in the image, a
    Btrfs-on-install layout, and `/etc/denden/AGENTS.md`.
-2. **Local source:** `/src`, `den src get|build|diff|rebase|drop`, the
+2. **Daily driver:** the browser you use, a fallback kernel, remote access
+   through T3 Connect and Tailscale, per-project runtimes, backups.
+3. **Local source:** `/src`, `den src get|build|diff|rebase|drop`, the
    `[local]` overlay repo, and rebase-on-update.
-3. **Read-only contract:** `dend` + `den` CLI + MCP server for `machine`,
-   `package query`, `service status`, `history query`.
-4. **Sessions:** sandboxed agent sessions with workspace snapshots and
-   review/commit/discard.
-5. **Broker:** capability grants and audited system mutations with automatic
-   root snapshots.
-6. **History & memory:** event log fed by pacman hooks, snapper, journald and
-   broker audit, plus per-agent memory.
-7. **Agent desktops:** headless Wayland per session for computer use, and a
-   supervisor view in the human shell.
+4. **Read-only contract:** `dend` + `den` CLI + MCP server for `machine`,
+   `package query`, `service status`, `history query`, plus `den doctor`.
+5. **Sessions:** sandboxed agent sessions with workspace snapshots and
+   review/commit/discard; storage chosen by measuring parallel worktrees.
+6. **Broker:** capability grants and audited system mutations with automatic
+   root snapshots; no root-equivalent `docker` group for agents.
+7. **History & memory:** event log fed by pacman hooks, snapper, journald and
+   broker audit; `den why`; memory split into an always-loaded core and
+   searchable history; reusable skills.
+8. **Agent desktops:** headless Wayland per session with its own input, and a
+   supervisor view in the human shell where watching never grants control.
+9. **Boot drive:** a graphical live USB for install and repair, machine
+   profiles that rebuild a machine on new hardware, an encrypted vault.
+10. **Stable releases:** tested update channels, release tests, Secure Boot,
+    and a reference laptop.
