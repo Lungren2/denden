@@ -24,7 +24,9 @@
 # Downloaded packages are kept in a cache shared with the VM, so only the
 # first run downloads the full ~2 GiB.
 #
-# Needs qemu-base, qemu-hw-display-virtio-vga, edk2-ovmf, python, socat,
+# Needs qemu-base, qemu-hw-display-virtio-vga, qemu-hw-display-virtio-gpu
+# (virtio-vga's module needs it, but doesn't depend on it: without it QEMU
+# segfaults at start), edk2-ovmf, python, socat,
 # limine, gptfdisk, dosfstools and mtools; `backup` also needs sudo (to put
 # the test on the installed disk through qemu-nbd).
 # The VM lives in ~/.cache/denden/vm; its serial logs and screenshots too.

@@ -61,7 +61,8 @@ Test the result without real hardware:
 ```sh
 sudo pacman -S --needed qemu-desktop edk2-ovmf
 run_archiso -u -i out/*.iso          # boot the live image
-sudo pacman -S --needed qemu-base qemu-hw-display-virtio-vga edk2-ovmf socat \
+sudo pacman -S --needed qemu-base qemu-hw-display-virtio-vga \
+  qemu-hw-display-virtio-gpu edk2-ovmf socat \
   limine gptfdisk dosfstools mtools
 ./scripts/test-install.sh            # install to a virtual disk, then boot it
 ./scripts/test-install.sh windows    # boot it and pick Windows at startup
