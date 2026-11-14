@@ -76,7 +76,9 @@ script shuts the VM down cleanly for that.
 
 ## Flashing
 
-WSL can't see USB drives directly, so write the ISO from Windows. The ISO is
+WSL can't see USB drives directly, so write the ISO from Windows. `scripts/flash.ps1`
+keeps a stick's backup partition and replaces only the image (`-Erase` wipes
+everything). The ISO is
 reachable at `\\wsl$\archlinux\home\<user>\denden\out\`.
 
 `scripts/flash.ps1` wipes a USB disk, writes the ISO in DD mode and verifies it
@@ -125,6 +127,14 @@ To reach the machine from your other devices, open **Connect to Tailscale**
 from the launcher (it also allows SSH over Tailscale) and sign in to T3
 Connect in T3 Code's settings. The firewall refuses every other inbound
 connection. Projects can pin their own tool versions in a `mise.toml`.
+
+Backups go to the Den Den USB stick: with it plugged in, open **Set up
+backups** from the launcher. It adds a backup partition after the Den Den
+image (the stick stays bootable) and prints the key the backups are encrypted
+with; keep that key in your password manager. After that, `/home` and `/src`
+are backed up whenever the stick is plugged in and daily while it is, and a
+notification asks for the stick when the last backup is three days old.
+Restore with `denden-backup restic restore latest --target <dir> --include <path>`.
 
 ## License
 

@@ -76,9 +76,12 @@ What the machine needs before it is the one you work on every day.
   system toolchains)
 - [x] Terminal tools: fzf, zoxide, lazygit, git-delta (git's pager), btop,
   dust, duf, hyperfine, yq, tmux
-- [ ] Backups with restic of `/home`, `/src` and T3 Code's state
-  (`~/.t3/userdata`), leaving out caches, worktrees and Docker; a restore
-  tested, not just a backup
+- [x] Backups with restic of `/home` and `/src` (T3 Code's state included) to
+  a partition on the Den Den USB stick (`denden-backup`), leaving out caches,
+  worktrees, dependencies and build output: from a fresh snapshot, when the
+  stick is plugged in and daily, each one checked by restoring a file;
+  re-flashing the stick keeps them; a reminder when they're overdue
+- [ ] Backups to cloud storage too, for a copy away from the machine
 - [x] Stays awake on AC power, lid shut or not, so remote sessions don't
   vanish
 

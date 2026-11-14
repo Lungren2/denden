@@ -9,6 +9,9 @@
 #                                    # the start every 2 s and the desktop
 #   scripts/test-install.sh windows  # boot, pick Windows in the startup
 #                                    # picker and screenshot what starts
+#   scripts/test-install.sh backup   # boot with a Den Den USB stick plugged
+#                                    # in, set up backups on it, back up
+#                                    # twice and check the backups
 #   scripts/test-install.sh          # install, then boot
 #
 # A second, small disk stands in for a Windows disk: its EFI system partition
@@ -22,7 +25,8 @@
 # first run downloads the full ~2 GiB.
 #
 # Needs qemu-base, qemu-hw-display-virtio-vga, edk2-ovmf, python, socat,
-# limine, gptfdisk, dosfstools and mtools.
+# limine, gptfdisk, dosfstools and mtools; `backup` also needs sudo (to put
+# the test on the installed disk through qemu-nbd).
 # The VM lives in ~/.cache/denden/vm; its serial logs and screenshots too.
 set -euo pipefail
 
@@ -155,10 +159,79 @@ boot_phase() {
   echo "==> Screenshot: ${vm}/desktop.png"
 }
 
+# The installed disk's root and log subvolumes, through qemu-nbd: run CMD with
+# them mounted at $1 (root) and $1/var/log.
+with_installed_disk() { # with_installed_disk DIR CMD...
+  local dir=$1; shift
+  sudo modprobe nbd max_part=8
+  sudo qemu-nbd -c /dev/nbd0 "${vm}/disk.qcow2"
+  sudo udevadm settle
+  sudo mkdir -p -- "${dir}"
+  sudo mount -o subvol=@ /dev/nbd0p2 "${dir}"
+  sudo mount -o subvol=@log /dev/nbd0p2 "${dir}/var/log"
+  "$@" || true
+  sudo umount -R "${dir}"
+  sudo qemu-nbd -d /dev/nbd0 >/dev/null
+}
+
+backup_phase() {
+  local iso mnt="${vm}/mnt" result
+  [[ -f ${vm}/disk.qcow2 ]] || { echo "error: nothing installed; run the install phase" >&2; exit 1; }
+  iso="$(ls -t "${repo_root}"/out/denden-*.iso 2>/dev/null | head -n1)"
+  # A 16 GiB stick holding the image, as flash.ps1 leaves it.
+  rm -f -- "${vm}/stick.raw"
+  truncate -s 16G "${vm}/stick.raw"
+  dd if="${iso}" of="${vm}/stick.raw" bs=4M conv=notrunc status=none
+
+  # At the next boot, run the backup commands as root; their output goes to
+  # the journal.
+  write_test() {
+    sudo tee "${mnt}/etc/systemd/system/denden-backup-test.service" >/dev/null <<'UNIT'
+[Unit]
+Description=Den Den backup test
+After=multi-user.target
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -xc 'denden-backup setup --yes && denden-backup && denden-backup status && echo "a change" > /home/tester/Documents/changed.txt && denden-backup && denden-backup restic snapshots && denden-backup restic ls latest /home/tester/Documents && echo DENDEN-BACKUP-TEST: OK'
+UNIT
+    sudo ln -sf ../denden-backup-test.service "${mnt}/etc/systemd/system/multi-user.target.wants/denden-backup-test.service"
+  }
+  with_installed_disk "${mnt}" write_test
+
+  echo "==> Booting with a Den Den stick plugged in"
+  rm -f -- "${vm}/qmp.sock"
+  "${qemu_common[@]}" -device virtio-vga -qmp "unix:${vm}/qmp.sock,server,nowait" \
+    -device qemu-xhci -drive "if=none,id=stick,format=raw,file=${vm}/stick.raw" \
+    -device usb-storage,drive=stick -serial "file:${vm}/boot.log" &
+  local qemu_pid=$!
+  sleep "${boot_wait}"
+  qmp '{"execute":"system_powerdown"}' || true
+  local i
+  for ((i = 0; i < 60; i++)); do kill -0 "${qemu_pid}" 2>/dev/null || break; sleep 1; done
+  kill "${qemu_pid}" 2>/dev/null || true
+  wait "${qemu_pid}" 2>/dev/null || true
+
+  read_log() {
+    sudo journalctl -D "${mnt}/var/log/journal" --no-pager -o cat \
+      -u denden-backup-test.service -u denden-backup.service > "${vm}/backup.log"
+    sudo rm -f "${mnt}/etc/systemd/system/denden-backup-test.service" \
+      "${mnt}/etc/systemd/system/multi-user.target.wants/denden-backup-test.service"
+  }
+  with_installed_disk "${mnt}" read_log
+  if grep -q '^DENDEN-BACKUP-TEST: OK' "${vm}/backup.log"; then
+    echo "==> Backup test passed (log: ${vm}/backup.log)"
+  else
+    echo "==> Backup test FAILED; ${vm}/backup.log:" >&2
+    tail -n 40 "${vm}/backup.log" >&2
+    exit 1
+  fi
+}
+
 case "${1:-all}" in
   install) install_phase ;;
   boot) boot_phase ;;
   windows) boot_phase windows ;;
+  backup) backup_phase ;;
   all) install_phase; boot_phase ;;
-  *) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
