@@ -21,18 +21,27 @@ files = ["${share}/denden.toml"]
 EOF
 fi
 
-# The terminal follows the same palette. Noctalia writes the theme file, but
-# won't create foot.ini while foot's system-wide one exists.
-foot_ini="${XDG_CONFIG_HOME:-${HOME}/.config}/foot/foot.ini"
-if [[ ! -e ${foot_ini} ]]; then
-  mkdir -p -- "$(dirname -- "${foot_ini}")"
-  cat > "${foot_ini}" <<EOF
-[main]
-include=${XDG_CONFIG_HOME:-${HOME}/.config}/foot/themes/noctalia
-font=monospace:size=11
-login-shell=yes
-pad=12x10
+# The terminal, Ghostty, reads only the user's own config, so start one
+# that includes Den Den's settings and then the user's config.local, which
+# win. Noctalia adds the palette's `theme` line to it.
+# Ghostty writes a template of comments on its first run; if it got there
+# first (its service starts with the session too), replace that template.
+ghostty_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/ghostty"
+ghostty_config=${ghostty_dir}/config.ghostty
+if [[ ! -e ${ghostty_dir}/config ]] && { [[ ! -e ${ghostty_config} ]] \
+    || grep -q 'This template file has been automatically created' "${ghostty_config}"; }; then
+  theme=$(grep -E '^theme *=' "${ghostty_config}" 2>/dev/null || true)
+  mkdir -p -- "${ghostty_dir}"
+  cat > "${ghostty_config}" <<'EOF'
+# Ghostty, the terminal. This file includes Den Den's settings, then yours
+# from config.local (next to this file), which win. Put your changes there:
+# both files are read after this one, so a setting here is overridden.
+# Reference: ghostty +show-config --default --docs
+config-file = /usr/share/denden/ghostty/config
+config-file = ?config.local
 EOF
+  [[ -n ${theme} ]] && printf '%s\n' "${theme}" >> "${ghostty_config}"
+  systemctl --user reload app-com.mitchellh.ghostty.service 2>/dev/null || true
 fi
 
 exec noctalia "$@"

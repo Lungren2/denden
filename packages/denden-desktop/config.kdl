@@ -168,7 +168,7 @@ binds {
     Mod+D { spawn-sh "noctalia msg panel-toggle launcher"; }
     Mod+S hotkey-overlay-title="Quick settings" { spawn-sh "noctalia msg panel-toggle control-center"; }
     Mod+Comma hotkey-overlay-title="Settings" { spawn-sh "noctalia msg settings-toggle"; }
-    Mod+Return hotkey-overlay-title="Open a terminal" { spawn "foot"; }
+    Mod+Return hotkey-overlay-title="Open a terminal" { spawn "ghostty" "+new-window"; }
     Mod+T hotkey-overlay-title="Open T3 Code" { spawn "t3code"; }
     Mod+B hotkey-overlay-title="Open Helium" { spawn "helium-browser"; }
     Mod+E hotkey-overlay-title="Open Files" { spawn "nautilus" "--new-window"; }

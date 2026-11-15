@@ -11,7 +11,7 @@
 
 pkgname=denden-desktop
 pkgver=0.1.0
-pkgrel=6
+pkgrel=7
 pkgdesc='Den Den desktop: a Niri session with T3 Code as the main window'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -26,7 +26,10 @@ depends=(
   'noctalia'
   # Apps the taskbar pins, the clipboard, and the Secret Service T3 Code
   # keeps credentials in
-  'foot' 'nautilus' 'wl-clipboard' 'gnome-keyring'
+  'nautilus' 'wl-clipboard' 'gnome-keyring'
+  # The terminal: Ghostty running fish, with a starship prompt, zoxide's `z`
+  # and fzf's fuzzy history, in Cascadia Code
+  'ghostty' 'fish' 'starship' 'zoxide' 'fzf' 'ttf-cascadia-code'
   # Reminders sent as notifications
   'libnotify'
   # GTK apps in the dark theme
@@ -57,22 +60,28 @@ source=(
   'denden-backup-reminder.timer'
   '50-niri-limit-free-buffer-pool.json'
   'wallpaper.py'
+  'ghostty.config'
+  'denden.fish'
+  'starship.toml'
 )
 sha256sums=(
-  'b8e08f95f33bb050e97ea22cec9a9f7b4799cb438ad94af886763fb37e4c5184'
-  '406af170d75bc8173d74e62d8b145fb8c5850e31f3144891a0120fa070e8b870'
-  'd698aff8f74646d926472715a9827bea5668e91e513b8bd19032ef3d2ac4c608'
+  'bc27b8dfce00d96854083002e145e2afebfd2cfc79c238f17adf41c4ddd9ac16'
+  '5098d80a3d2bb6c609ea5bff21429605cb3142c92b47b0e25ac749f8e1b09ca7'
+  'a8b9d0dce1f3c08a9c22af5a48c240ea4c0493ceb907e7d92b8773ba79047bef'
   'daba5531decf23aa3008a81ed9a1678443f146385f3064682de219adc004d7ae'
   '1be143020d6d0c0ad89c28e1c85a8fd045bb68568b5eb93cdb1824ff75f9c665'
   '4af02bb4a6365e718a30283d4c2fd11d124af6d8ecca48f695e4690e1e2e0beb'
-  'd7264ecd5a448c88895e21a3d20e9b1b4015cec3123b8e330f77e1d31d640053'
-  '44f51a68ab32ab19c89ae24e2e22ba6b57cc37a17b63edd331cf6366b02b1022'
-  '376f9847aacd5b8e706304e45e8ba533c8f57141d04297aa6556ac8c2a6309fb'
+  '10a45838d327659625801934839d776e6a0c06ecde17ca605507e3cd49c378c4'
+  'f6989798a208a410ba9ee94d055e3c90c24aafce4f665aa77eb4d05843a5deef'
+  '579dec713a17c035f988722abb90d35fe96da45fa5639053dd09ba420d38461c'
   'bae6b5b75817c78a88db47b1f47ee72cf99baed9dcbaed7751a1a021064981d9'
   'fb767feba341e68d6df7c9ab5cdd76fd8cf674dcb01466db52b1f6400b1d9b0c'
   '283c340df053b9cabf2fdd76356f08e687a828aeabe5d29d486ece0a2c092be4'
   '1a04a9eb0e51c8eba4f06373c9e514012417f01295d4938ed0635932fb24cd47'
   'a146c2b7418da7f26fa17cb49264df4bdcab0cae66e6c17e3b294118fd071e5c'
+  'e5b0f224b20656c11384ea8915596d69d5889fd7ffb6737bbc1caa9a4e569831'
+  '8b2b68ed14903aa7959f0f1c12d4bff356b3ec42f0f2dc874e89b1db409aaba5'
+  '7ed9f2c0374d20e3cd4d80809115f77909fc61b1ad825142c28cbfd50e73b987'
 )
 
 build() {
@@ -89,6 +98,15 @@ package() {
   install -Dm644 noctalia.toml "${pkgdir}/usr/share/denden/noctalia/denden.toml"
   install -Dm644 DenDen.json "${pkgdir}/usr/share/denden/noctalia/DenDen.json"
   install -Dm644 wallpaper.png "${pkgdir}/usr/share/denden/wallpaper/denden.png"
+
+  # The terminal. Ghostty's own user service keeps it running in the
+  # background, so a new window (Super+Enter) opens at once.
+  install -Dm644 ghostty.config "${pkgdir}/usr/share/denden/ghostty/config"
+  install -Dm644 denden.fish "${pkgdir}/usr/share/fish/vendor_conf.d/denden.fish"
+  install -Dm644 starship.toml "${pkgdir}/usr/share/denden/starship.toml"
+  install -d "${pkgdir}/usr/lib/systemd/user/graphical-session.target.wants"
+  ln -s ../app-com.mitchellh.ghostty.service \
+    "${pkgdir}/usr/lib/systemd/user/graphical-session.target.wants/app-com.mitchellh.ghostty.service"
 
   # A launcher entry to sign in to GitHub, after which denden-repos (from
   # denden-base) brings the user's repositories into ~/Projects.

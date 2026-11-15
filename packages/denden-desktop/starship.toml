@@ -1,0 +1,67 @@
+# Den Den's prompt for starship: one quiet line with the folder, the git
+# branch and its state, and, only inside a project, the version it pins.
+# ~/.config/starship.toml replaces this file.
+
+add_newline = true
+format = """$directory$git_branch$git_state$git_status$nodejs$bun$python$rust$dotnet$cmd_duration$line_break$character"""
+
+[directory]
+style = "bold #9db8ff"
+truncation_length = 3
+truncate_to_repo = true
+read_only = " ro"
+
+[git_branch]
+format = "[$branch]($style) "
+style = "#c9b6ff"
+
+[git_state]
+format = "[$state( $progress_current/$progress_total)]($style) "
+style = "#e8c87a"
+
+[git_status]
+format = "([$all_status$ahead_behind]($style) )"
+style = "#9ba1ad"
+conflicted = "!"
+ahead = "↑${count}"
+behind = "↓${count}"
+diverged = "↑${ahead_count}↓${behind_count}"
+modified = "•"
+staged = "+"
+untracked = "?"
+deleted = "−"
+renamed = "»"
+stashed = ""
+
+[nodejs]
+format = "[node $version]($style) "
+version_format = "${major}.${minor}"
+style = "#8fd19e"
+detect_files = ["package.json", ".nvmrc"]
+
+[bun]
+format = "[bun $version]($style) "
+style = "#e8c87a"
+
+[python]
+format = "[py $version( $virtualenv)]($style) "
+version_format = "${major}.${minor}"
+style = "#e8c87a"
+
+[rust]
+format = "[rust $version]($style) "
+version_format = "${major}.${minor}"
+style = "#ff9a9a"
+
+[dotnet]
+format = "[.NET $version]($style) "
+style = "#c9b6ff"
+
+[cmd_duration]
+min_time = 2_000
+format = "[$duration]($style) "
+style = "#5b616d"
+
+[character]
+success_symbol = "[>](bold #9db8ff)"
+error_symbol = "[>](bold #ff7a7a)"

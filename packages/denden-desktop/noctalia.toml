@@ -22,7 +22,7 @@ launcher_position = "bottom_center"   # rises from the taskbar, like Start
 
 # The launcher: search on top, pinned apps in a grid below it.
 [shell.launcher]
-pinned = ["t3code", "helium", "org.gnome.Nautilus", "foot"]
+pinned = ["t3code", "helium", "org.gnome.Nautilus", "com.mitchellh.ghostty"]
 default_view = "pinned"
 search_position = "top"
 width = 640
@@ -40,7 +40,7 @@ custom_palette = "DenDen"
 
 # The terminal and GTK apps (Files, dialogs) take the same colours.
 [theme.templates]
-builtin_ids = ["foot", "gtk3", "gtk4"]
+builtin_ids = ["ghostty", "gtk3", "gtk4"]
 
 [wallpaper]
 fill_mode = "crop"
@@ -92,7 +92,7 @@ scale = 1.5                         # a 24 px mark, like the app icons
 capsule_padding = 5                 # a 39 px hover; must be a whole number
 
 [widget.taskbar]
-pinned = ["t3code", "helium", "org.gnome.Nautilus", "foot"]
+pinned = ["t3code", "helium", "org.gnome.Nautilus", "com.mitchellh.ghostty"]
 pinned_opacity = 0.55
 icon_scale = 1.5                    # 24 px icons
 item_spacing = 4
