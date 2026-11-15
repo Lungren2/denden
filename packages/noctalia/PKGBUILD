@@ -1,0 +1,107 @@
+# Maintainer: Ethan
+# Based on Arch's recipe (Peter Jung <ptr1337@archlinux.org>, Noctalia Team
+# <team@noctalia.dev>), with Den Den's patches. [denden] comes before
+# [cachyos] and [extra], so this build is the one pacman keeps; when upstream
+# releases a new version, update pkgver here and rebase the patches.
+#
+# 0001  taskbar buttons are full-size, like the bar's other buttons, so
+#       their hover is a button rather than a ring around the icon
+# 0002  the quick settings home card leaves out version strings
+
+_pkgname=noctalia
+pkgname=noctalia
+pkgver=5.5.0
+pkgrel=2
+pkgdesc='A sleek, customizable desktop shell crafted for Wayland'
+arch=('x86_64' 'aarch64')
+url='https://github.com/noctalia-dev/noctalia'
+license=('MIT')
+depends=(
+  'bash'
+  'cairo'
+  'curl'
+  'fontconfig'
+  'freetype2'
+  'git'
+  'glib2'
+  'glibc'
+  'harfbuzz'
+  'hicolor-icon-theme'
+  'jemalloc'
+  'libgcc'
+  'libglvnd'
+  'libical'
+  'libjxl'
+  'libpipewire'
+  'libqalculate'
+  'librsvg'
+  'libsecret'
+  'libsndfile'
+  'libsodium'
+  'libstdc++'
+  'libwebp'
+  'libwireplumber'
+  'libxkbcommon'
+  'libxml2'
+  'md4c'
+  'pam'
+  'polkit'
+  'pango'
+  'sdbus-cpp'
+  'tomlplusplus'
+  'wayland'
+)
+optdepends=(
+  'ddcutil: monitor brightness control'
+  'power-profiles-daemon: power profile management'
+  'upower: battery and power device integration'
+)
+
+makedepends=(
+  'meson'
+  'ninja'
+  'nlohmann-json'
+  'pkgconf'
+  'stb'
+  'wayland-protocols'
+)
+source=("${_pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver//_/-}.tar.gz"
+        '0001-taskbar-tiles-fill-the-bar-hover-size.patch'
+        '0002-home-card-hide-version-strings.patch')
+sha256sums=('f3fe8a1f1d4306280413e04f934400b787dba212d296d97dfd638bcb55c78262'
+            'a4fd04d28e95a8da2415a7a590ccd845467c80a738e3b15c5a5498614b46b26c'
+            'af17460e7f407bda76e186a6181b229c5f119441216b0eed3e80b1ed6a939148')
+
+prepare() {
+  cd "${_pkgname}-${pkgver//_/-}"
+  local patch
+  for patch in "${srcdir}"/0*.patch; do
+    patch -Np1 -i "${patch}"
+  done
+}
+
+build() {
+  CXXFLAGS+=" -Wno-unused-result"
+  arch-meson "${_pkgname}-${pkgver//_/-}" build-release \
+    -Db_ndebug=true \
+    -Dtests=disabled
+  meson compile -C build-release
+  for shell in bash fish zsh; do
+    build-release/noctalia completions "$shell" > "${shell}-completion"
+  done
+}
+
+package() {
+  meson install -C build-release --destdir "${pkgdir}"
+
+  install -Dm644 "${_pkgname}-${pkgver//_/-}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm644 "${_pkgname}-${pkgver//_/-}/README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+  # shell completions
+  install -vDm644 bash-completion \
+    "$pkgdir/usr/share/bash-completion/completions/noctalia"
+  install -vDm644 fish-completion \
+    "$pkgdir/usr/share/fish/vendor_completions.d/noctalia.fish"
+  install -vDm644 zsh-completion \
+    "$pkgdir/usr/share/zsh/site-functions/_noctalia"
+
+}

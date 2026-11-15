@@ -1,0 +1,29 @@
+diff --git a/src/shell/control_center/tabs/home_tab.cpp b/src/shell/control_center/tabs/home_tab.cpp
+index 6bfd312..0c9ab03 100644
+--- a/src/shell/control_center/tabs/home_tab.cpp
++++ b/src/shell/control_center/tabs/home_tab.cpp
+@@ -362,14 +362,22 @@ std::unique_ptr<Flex> HomeTab::create() {
+               .text = noctaliaVersionLine(),
+               .fontSize = Style::fontSizeCaption * scale,
+               .color = colorSpecFromRole(ColorRole::OnSurfaceVariant),
+-              .configure = configureUserDetailLabel,
++              // The shell's and compositor's version strings are build details, not
++              // something to show on a product's home card.
++              .configure = [configureUserDetailLabel](Label& label) {
++                configureUserDetailLabel(label);
++                label.setVisible(false);
++              },
+           }),
+           ui::label({
+               .out = &m_userCompositor,
+               .text = compositorLine(std::nullopt),
+               .fontSize = Style::fontSizeCaption * scale,
+               .color = colorSpecFromRole(ColorRole::OnSurfaceVariant),
+-              .configure = configureUserDetailLabel,
++              .configure = [configureUserDetailLabel](Label& label) {
++                configureUserDetailLabel(label);
++                label.setVisible(false);
++              },
+           })
+       )
+   );

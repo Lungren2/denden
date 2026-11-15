@@ -1,0 +1,17 @@
+diff --git a/src/shell/bar/widgets/taskbar_widget.cpp b/src/shell/bar/widgets/taskbar_widget.cpp
+index b1ca2cc..ed269c4 100644
+--- a/src/shell/bar/widgets/taskbar_widget.cpp
++++ b/src/shell/bar/widgets/taskbar_widget.cpp
+@@ -897,6 +897,12 @@ void TaskbarWidget::buildTaskButtons(Renderer& renderer) {
+       tileSize = std::round(iconSize + tilePadding * 2.0F);
+     }
+   }
++  // Ungrouped tiles fill the bar's capsule cross size (capsule_thickness), the height of every
++  // other bar widget's hover pill, so a hover is a full-size button around the icon, matching
++  // the rest of the bar, rather than a ring hugging it.
++  if (!m_groupByWorkspace && barCross > 0.0F) {
++    tileSize = std::max(tileSize, std::round(barCross * capsuleThickness));
++  }
+   const float tileGap = static_cast<float>(m_configOptions.itemSpacing) * m_contentScale;
+ 
+   const FontWeight fontWeight = labelFontWeight();
