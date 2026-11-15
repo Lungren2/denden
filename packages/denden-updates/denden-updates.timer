@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Den Den packages daily
+
+[Timer]
+OnCalendar=daily
+OnStartupSec=10min
+Persistent=true
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Den Den packages for updates
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/denden-update check --notify
+Nice=10
+MemoryMax=512M
+TimeoutStartSec=3min

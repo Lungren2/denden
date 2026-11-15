@@ -15,6 +15,18 @@ if [[ ${EUID} -eq 0 ]]; then
   exit 1
 fi
 
+# Optional package names let installed machines rebuild just their own set.
+packages=()
+if (($#)); then
+  for name in "$@"; do
+    [[ $name =~ ^[a-zA-Z0-9@._+-]+$ && -f ${repo_root}/packages/$name/PKGBUILD ]] || {
+      echo "error: unknown package: $name" >&2; exit 1;
+    }
+    packages+=("${repo_root}/packages/$name/PKGBUILD")
+  done
+else
+  packages=("${repo_root}"/packages/*/PKGBUILD)
+fi
 mkdir -p -- "${repo_dir}"
 export PKGDEST="${repo_dir}"
 export SRCDEST="${repo_root}/repo/sources"
@@ -24,11 +36,17 @@ export BUILDDIR="${XDG_CACHE_HOME:-${HOME}/.cache}/denden/build"
 mkdir -p -- "${SRCDEST}" "${BUILDDIR}"
 
 shopt -s nullglob
-for pkgbuild in "${repo_root}"/packages/*/PKGBUILD; do
+exec 9>"${repo_dir}/.build.lock"
+flock 9
+for pkgbuild in "${packages[@]}"; do
   pkg_dir="$(dirname -- "${pkgbuild}")"
   mapfile -t pkg_files < <(cd -- "${pkg_dir}" && makepkg --packagelist)
   if [[ -f ${pkg_files[0]} ]]; then
     echo "==> $(basename -- "${pkg_dir}"): up to date"
+    # Cached archives may not yet have an entry in the database.
+    built=()
+    for file in "${pkg_files[@]}"; do [[ ! -f $file ]] || built+=("$file"); done
+    repo-add --prevent-downgrade "${repo_db}" "${built[@]}"
     continue
   fi
   echo "==> Building $(basename -- "${pkg_dir}")"
@@ -50,7 +68,7 @@ for pkgbuild in "${repo_root}"/packages/*/PKGBUILD; do
   # nothing to put in it, so add only what was actually built.
   built=()
   for file in "${pkg_files[@]}"; do if [[ -f ${file} ]]; then built+=("${file}"); fi; done
-  repo-add --remove "${repo_db}" "${built[@]}"
+  repo-add --prevent-downgrade "${repo_db}" "${built[@]}"
 done
 
 # Create an empty database if there were no packages, so pacman can still sync.

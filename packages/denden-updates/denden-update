@@ -1,0 +1,163 @@
+#!/usr/bin/python3
+"""Den Den package maintenance. Checks never refresh the live pacman database."""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import urllib.request
+
+
+def run(*args, **kwargs):
+    return subprocess.run(args, check=True, text=True, **kwargs)
+
+
+def output(*args):
+    return run(*args, stdout=subprocess.PIPE, env=dict(os.environ, LC_ALL='C')).stdout.strip()
+
+
+def recipe(path):
+    text = (path / 'PKGBUILD').read_text()
+    values = {}
+    for key in ('pkgver', 'pkgrel', 'epoch'):
+        match = re.search(rf'^{key}=([\w.+:-]+)$', text, re.M)
+        if match:
+            values[key] = match[1]
+    version = f"{values['pkgver']}-{values['pkgrel']}"
+    return (f"{values['epoch']}:" if values.get('epoch', '0') != '0' else '') + version
+
+
+def installed():
+    return dict(line.split(' ', 1) for line in output('pacman', '-Q').splitlines())
+
+
+def check(root):
+    local = installed()
+    published = {}
+    for line in output('pacman', '-Sl', 'denden').splitlines():
+        _, name, version, *_ = line.split()
+        published[name] = version
+    messages = []
+    errors = []
+    for path in sorted((root / 'packages').iterdir()):
+        if not (path / 'PKGBUILD').is_file() or path.name not in local:
+            continue
+        name = path.name
+        wanted = recipe(path)
+        if output('vercmp', wanted, local[name]) == '1':
+            messages.append(f'{name}: recipe {wanted}, installed {local[name]} — rebuild available')
+        if published.get(name) != local[name]:
+            action = 'publish needed'
+            if name in published and output('vercmp', published[name], local[name]) == '1':
+                action = 'upgrade available'
+            messages.append(f'{name}: installed {local[name]}, repository {published.get(name, "missing")} — {action}')
+    # Stable releases only. A failed lookup is an error, never “up to date”.
+    for repository, packages in (
+        ('pingdotgg/t3code', ('t3code-cli', 't3code-cli-bin', 't3code-desktop')),
+        ('noctalia-dev/noctalia', ('noctalia',)),
+    ):
+        names = [name for name in packages if name in local]
+        if not names:
+            continue
+        try:
+            request = urllib.request.Request(
+                f'https://api.github.com/repos/{repository}/releases/latest',
+                headers={'User-Agent': 'DenDen-update-check', 'Accept': 'application/vnd.github+json'})
+            with urllib.request.urlopen(request, timeout=25) as response:
+                release = json.load(response)
+            latest = release['tag_name'].removeprefix('v')
+            if release.get('draft') or release.get('prerelease'):
+                raise ValueError('latest endpoint returned a prerelease')
+            for name in names:
+                current = local[name].split(':')[-1].rsplit('-', 1)[0]
+                if output('vercmp', latest, current) == '1':
+                    messages.append(f'{name}: stable {latest} available (installed {current}); update recipe and verify patches')
+        except Exception as exc:
+            errors.append(f'{repository}: {exc}')
+    # These packages embed runtimes. An updated runtime needs a package rebuild,
+    # even if T3 itself has not released a new version.
+    for name, runtime in (('t3code-cli', 'nodejs'), ('t3code-desktop', 'electron44')):
+        if name not in local:
+            continue
+        info = output('pacman', '-Si', runtime)
+        available = re.search(r'^Version\s*:\s*(\S+)', info, re.M)
+        target = available[1] if available else local.get(runtime)
+        archives = sorted(Path('/var/lib/denden/repo').glob(f'{name}-*.pkg.tar.zst'))
+        for archive in archives:
+            if output('pacman', '-Qp', str(archive)) != f'{name} {local[name]}':
+                continue
+            buildinfo = output('bsdtar', '-xOf', str(archive), '.BUILDINFO')
+            match = re.search(rf'^installed = {re.escape(runtime)}-(.+)$', buildinfo, re.M)
+            built = match[1].rsplit('-', 1)[0] if match else None
+            if built and target and output('vercmp', target, built) == '1':
+                messages.append(f'{name}: built with {runtime} {built}, repository has {target}; bump pkgrel and rebuild')
+            break
+    return {'updates': messages, 'errors': errors}
+
+
+def apply(root):
+    if os.geteuid() == 0:
+        raise ValueError('Run as your normal user; only publishing and pacman use sudo.')
+    if not (root / 'scripts/build-packages.sh').is_file():
+        raise ValueError(f'No Den Den checkout at {root}')
+    # No implicit pulls or version edits: build the recipes the agent/human reviewed.
+    local = installed()
+    names = sorted(path.name for path in (root / 'packages').iterdir()
+                   if (path / 'PKGBUILD').is_file() and path.name in local)
+    if not names:
+        raise ValueError('No installed Den Den packages found')
+    run('sudo', 'pacman', '-Syu')
+    run('systemd-run', '--user', '--scope', '-p', 'MemoryMax=8G', '-p', 'CPUQuota=400%',
+        'nice', '-n', '10', str(root / 'scripts/build-packages.sh'), *names)
+    # Publish only archives selected by the current recipes (never stale versions).
+    archives = []
+    env = dict(os.environ, PKGDEST=str(root / 'repo/x86_64'))
+    for name in names:
+        paths = run('makepkg', '--packagelist', cwd=root / 'packages' / name,
+                    env=env, stdout=subprocess.PIPE).stdout.splitlines()
+        archives.extend(path for path in paths if Path(path).is_file())
+    if not archives:
+        raise ValueError('Build produced no packages')
+    print('Publishing completed packages, then performing a full system upgrade.', flush=True)
+    run('sudo', 'denden-publish', *archives)
+    run('sudo', 'pacman', '-Syu')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('command', choices=('check', 'apply'), nargs='?', default='check')
+    parser.add_argument('--source', type=Path, default=Path('/src/denden'))
+    parser.add_argument('--json', action='store_true')
+    parser.add_argument('--notify', action='store_true')
+    args = parser.parse_args()
+    if args.command == 'apply':
+        apply(args.source)
+        return
+    result = check(args.source)
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print('\n'.join(result['updates'] + result['errors']) or 'Den Den packages are up to date.')
+    if args.notify:
+        state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'denden'
+        state.mkdir(parents=True, exist_ok=True)
+        previous = state / 'updates.json'
+        serialized = json.dumps(result, sort_keys=True)
+        if not previous.exists() or previous.read_text() != serialized:
+            if result['errors']:
+                run('notify-send', '--app-name=Den Den', 'Couldn’t check updates', 'The update check will try again tomorrow.')
+            elif result['updates']:
+                run('notify-send', '--app-name=Den Den', 'Updates available', 'Den Den packages need attention.')
+        previous.write_text(serialized)
+    if result['errors']:
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (subprocess.CalledProcessError, OSError, ValueError, KeyError) as error:
+        print(f'denden-update: {error}', file=sys.stderr)
+        sys.exit(1)

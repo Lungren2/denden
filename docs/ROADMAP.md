@@ -69,6 +69,12 @@ What the machine needs before it is the one you work on every day.
 - [x] Your GitHub repositories, and your organisations', cloned into
   `~/Projects` and fast-forwarded hourly (`denden-repos`) after one sign-in
   from the launcher
+- [x] Local package updates: publish completed builds into the installed
+  `[denden]` repo; daily checks for newer recipes, stable upstream releases,
+  and embedded runtimes; `denden-update apply` builds reviewed recipes and
+  performs a full pacman upgrade
+- [ ] Automated upstream recipe updates and patch rebases (failed builds need
+  review); signed remote publishing for other Den Den machines
 - [ ] A setup wizard for the GitHub sign-in and the other first-run choices
 - [x] Agent CLIs found from a non-interactive login shell, and from the
   desktop session: `~/.local/bin` and mise's shims on every `PATH`

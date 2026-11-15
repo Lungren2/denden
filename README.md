@@ -147,6 +147,38 @@ are backed up whenever the stick is plugged in and daily while it is, and a
 notification asks for the stick when the last backup is three days old.
 Restore with `denden-backup restic restore latest --target <dir> --include <path>`.
 
+## Package updates
+
+`denden-update check` reports differences between installed Den Den packages,
+the local repository, and recipes in `/src/denden`. It also checks the latest
+stable T3 Code and Noctalia releases, and the runtime versions embedded by
+T3 builds. `--json` returns the same report for agents. The user timer
+`denden-updates.timer` checks daily and sends a notification when the report
+changes; a failed lookup is reported, never treated as “up to date”.
+
+After reviewing and updating recipes, run `denden-update apply` as your user.
+It first performs a full system upgrade, then builds installed Den Den packages
+under a memory/CPU limit, publishes completed packages into
+`/var/lib/denden/repo`, and performs another full upgrade to install them.
+Build dependencies and publication use sudo; makepkg runs as the user. Failed
+builds stop before publication. Cached packages are reused; bump `pkgrel` when
+rebuilding the same upstream version. Builds and sources stay outside the
+checkout; package archives live in its ignored `repo/` directory.
+
+To build a subset: `scripts/build-packages.sh denden-base denden-desktop`.
+`sudo denden-publish PACKAGE…` publishes completed archives. Existing archives
+are retained; a different archive with the same filename is refused, and an
+older version cannot replace a newer repository entry. Publication places
+archives before updating the database. The installed `[denden]` repository
+already has priority over CachyOS and Arch, including for our patched Noctalia.
+
+Checks do not refresh pacman's live sync databases or install anything.
+Upstream releases still need a recipe bump, checksum refresh, patch review and
+successful build. This is a local repository, not a signed remote distribution
+service. No new upstream versions or recipe code are installed unattended.
+The GitHub repository timer can fast-forward a clean checkout; the updater
+never pulls or rewrites your working tree.
+
 ## License
 
 Original work in this repo is licensed under the [MIT License](LICENSE).

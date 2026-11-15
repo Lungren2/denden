@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Publish completed packages; leave old archives available for recovery.
+set -euo pipefail
+[[ ${EUID} -eq 0 ]] || { echo 'Run denden-publish with sudo.' >&2; exit 1; }
+(($#)) || { echo 'Usage: denden-publish PACKAGE…' >&2; exit 1; }
+repo=${DENDEN_REPO:-/var/lib/denden/repo}
+install -d -m755 "$repo"
+exec 9>/run/lock/denden-publish.lock
+flock 9
+files=()
+for package in "$@"; do
+  [[ -f $package && ! -L $package ]] || { echo "Not a package file: $package" >&2; exit 1; }
+  pacman -Qp -- "$package" >/dev/null
+  name=$(basename -- "$package")
+  [[ $name == *.pkg.tar.zst ]] || { echo "Unsupported archive: $name" >&2; exit 1; }
+  if [[ -e $repo/$name ]]; then
+    cmp -s -- "$package" "$repo/$name" || { echo "Different contents for $name; bump pkgrel before publishing." >&2; exit 1; }
+  else
+    temporary=$(mktemp "$repo/.package.XXXXXXXX")
+    trap 'rm -f -- "${temporary:-}"' EXIT
+    install -m644 -- "$package" "$temporary"
+    mv -T -- "$temporary" "$repo/$name"
+  fi
+  files+=("$repo/$name")
+done
+# repo-add writes the database through a temporary file and renames it.
+# -p refuses to replace an existing entry with an older version.
+repo-add --prevent-downgrade "$repo/denden.db.tar.gz" "${files[@]}"
+chmod a+r "$repo"/denden*.tar.gz

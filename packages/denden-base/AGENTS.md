@@ -68,6 +68,7 @@ override the system ones, so try a change there first.
 | Shell environment | bash (login shell; fish in the terminal starts from it), mise | `/etc/profile.d/denden.sh` (login shells), `/usr/lib/environment.d/50-denden.conf` (desktop session) | `denden-base` |
 | GitHub repositories | `denden-repos` (user timer) | `denden-repos.service`/`.timer` | `denden-base` |
 | Network and remote access | NetworkManager, Tailscale (`denden-tailscale`), `denden-firewall` | `/usr/share/denden/firewall.nft` | `denden-base` |
+| Package updates | `denden-update`, pacman | `denden-update check` reports recipe, release and runtime changes; after reviewing recipes, `denden-update apply` builds, publishes to `/var/lib/denden/repo`, then runs a full upgrade; daily check: `denden-updates.timer` (user) | `denden-updates` |
 | Backups | `denden-backup` (restic to the Den Den USB stick) | `/usr/share/denden/backup-excludes`; `denden-backup.timer` | `denden-base` |
 | Lid and power | systemd-logind | `/usr/lib/systemd/logind.conf.d/50-denden.conf` (override in `/etc/systemd/logind.conf.d/`) | `denden-base` |
 | Installer and live USB | `denden-install`, archiso | `/src/denden/archiso` | `denden-installer` |
@@ -80,7 +81,10 @@ Den Den is built from `/src/denden`, a git clone of github.com/Lungren2/denden:
   To change one: edit the file, bump `pkgrel`, refresh checksums with
   `makepkg -g`, install with `makepkg -si`, and commit with a message saying
   why. Changes there reach every future install, and the next `git pull`
-  brings them to this machine.
+  brings them to this machine. After reviewing recipe changes, run
+  `denden-update apply` as the user to build installed Den Den packages, publish
+  them into the local repo, and run a full pacman upgrade. Do not use sudo for
+  the build itself. Bump `pkgrel` when rebuilding the same upstream version.
 - `docs/agent-environment.md` is the design; `docs/ROADMAP.md` is what's done
   and what's next.
 - `scripts/test-install.sh` installs and boots the system in a VM; use it for

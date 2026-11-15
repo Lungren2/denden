@@ -9,12 +9,14 @@
 
 pkgname=denden-base
 pkgver=0.1.0
-pkgrel=7
+pkgrel=8
 pkgdesc='Den Den base system: agents, toolchains, snapshots and the agent contract'
 arch=('any')
 url='https://github.com/Lungren2/denden'
 license=('MIT')
 depends=(
+  # Package maintenance
+  'denden-updates'
   # Agents
   't3code-cli' 'claude-code' 'openai-codex'
   # Building any package on the system from source
@@ -56,25 +58,23 @@ source=(
   'denden-backup.rules'
   'backup-excludes'
 )
-sha256sums=(
-  '1bd4d76cf863a5f176cafa06c0d44bf61a847b3b36614ffb56cd10b5ec533aa5'
-  'dc2944dfeb9ad41503d14c76bcb308e2fa6355ec4bdf891914c99f4bb014217f'
-  '02f8a1d764a8067db6eb82a203b3a3e164a9a1416a73b2561ff0ace6e4d59135'
-  '978a0a07a01ed7f4a3c60b63b3a78fea5964fd158947cd420725967f7bc5cf6c'
-  '0d53cceed1c1addd0bf2befdf0b6161c074419f020ce772956cbddde73dd6b3e'
-  'bee84b40557982e302ca7d506abdacab47fc64998ddec456492f89ceb6798b3a'
-  'eda981231171281805468a8790615baffd3e384ba8b98afdc1b64c2e6f85866c'
-  'd4d79c520faff353f736621fc894c03e0e09bf2ed748e2c38800c36610025246'
-  'b8d65422a3618d528703f54ebae7c1b9d5be87b98a1ae72a17fe6dfba0c1339f'
-  '485f2083f0ca9e211226e68081582770532f7ef18f63a6726c302471e9551057'
-  'dc465fef4a4be91032874d0488c6e206cb0d6ba917a7d9de6987e4b4014538dd'
-  'b9026e7925b2cce187ed0d0a54bcff184203c641c313c64640a6d7d8e29ccb46'
-  '9998f870236c03dc04d2a4f635d14d7b584ccbaa6b540b31a0c081abdd1e9c63'
-  'e7dfa67a43c0c1ce2e22e9ae533d73d513d96626a8b512b9244c479e62c07fd2'
-  'f2f830ea0cfaeafac280f08bf33219eb834adc13ed18c76117625029c908a28f'
-  '6263b07b9f5bffe6bce229bd24b29b7fb2ffeb59861caaacfa3818c60926a59c'
-  '9bc6dc77db3a7f734bf3e2fc06d13c3c7fbd0f3341fda5db2f5e22a4a0a946c4'
-)
+sha256sums=('86100e34cf4c965d8d4715f17414205676ac87a0b2d402bef8d60d606090cde8'
+            'dc2944dfeb9ad41503d14c76bcb308e2fa6355ec4bdf891914c99f4bb014217f'
+            '02f8a1d764a8067db6eb82a203b3a3e164a9a1416a73b2561ff0ace6e4d59135'
+            '978a0a07a01ed7f4a3c60b63b3a78fea5964fd158947cd420725967f7bc5cf6c'
+            '0d53cceed1c1addd0bf2befdf0b6161c074419f020ce772956cbddde73dd6b3e'
+            'bee84b40557982e302ca7d506abdacab47fc64998ddec456492f89ceb6798b3a'
+            'eda981231171281805468a8790615baffd3e384ba8b98afdc1b64c2e6f85866c'
+            'd4d79c520faff353f736621fc894c03e0e09bf2ed748e2c38800c36610025246'
+            'b8d65422a3618d528703f54ebae7c1b9d5be87b98a1ae72a17fe6dfba0c1339f'
+            '485f2083f0ca9e211226e68081582770532f7ef18f63a6726c302471e9551057'
+            'dc465fef4a4be91032874d0488c6e206cb0d6ba917a7d9de6987e4b4014538dd'
+            'b9026e7925b2cce187ed0d0a54bcff184203c641c313c64640a6d7d8e29ccb46'
+            '9998f870236c03dc04d2a4f635d14d7b584ccbaa6b540b31a0c081abdd1e9c63'
+            'e7dfa67a43c0c1ce2e22e9ae533d73d513d96626a8b512b9244c479e62c07fd2'
+            'f2f830ea0cfaeafac280f08bf33219eb834adc13ed18c76117625029c908a28f'
+            '6263b07b9f5bffe6bce229bd24b29b7fb2ffeb59861caaacfa3818c60926a59c'
+            '9bc6dc77db3a7f734bf3e2fc06d13c3c7fbd0f3341fda5db2f5e22a4a0a946c4')
 
 package() {
   install -Dm644 AGENTS.md "${pkgdir}/etc/denden/AGENTS.md"
