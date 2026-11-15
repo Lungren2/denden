@@ -16,7 +16,7 @@
 
 pkgname=t3code-desktop
 pkgver=0.1.9
-pkgrel=1
+pkgrel=2
 _electron=electron44
 pkgdesc='T3 Code desktop app for coding agents'
 arch=('x86_64')

@@ -13,7 +13,7 @@
 
 pkgname=t3code-cli
 pkgver=0.1.9
-pkgrel=1
+pkgrel=2
 pkgdesc='T3 Code control plane for coding agents (headless server and CLI)'
 arch=('x86_64')
 url='https://github.com/pingdotgg/t3code'
