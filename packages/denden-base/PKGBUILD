@@ -9,7 +9,7 @@
 
 pkgname=denden-base
 pkgver=0.1.0
-pkgrel=6
+pkgrel=7
 pkgdesc='Den Den base system: agents, toolchains, snapshots and the agent contract'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -57,7 +57,7 @@ source=(
   'backup-excludes'
 )
 sha256sums=(
-  'aac968d0bb574be4da1026146211919450eea991d0d8157bbacc293f30900a05'
+  '1bd4d76cf863a5f176cafa06c0d44bf61a847b3b36614ffb56cd10b5ec533aa5'
   'dc2944dfeb9ad41503d14c76bcb308e2fa6355ec4bdf891914c99f4bb014217f'
   '02f8a1d764a8067db6eb82a203b3a3e164a9a1416a73b2561ff0ace6e4d59135'
   '978a0a07a01ed7f4a3c60b63b3a78fea5964fd158947cd420725967f7bc5cf6c'

@@ -61,11 +61,11 @@ override the system ones, so try a change there first.
 | Login | greetd, logging the user straight in | `/etc/greetd/config.toml` | `denden-installer` |
 | Windows and shortcuts | niri | `~/.config/niri/config.kdl` (copy of `/etc/niri/config.kdl`; reloads live; `niri msg` for state) | `denden-desktop` |
 | Taskbar, launcher, quick settings, notifications, wallpaper, lock screen | Noctalia, started by `denden-shell` | `~/.config/noctalia/config.toml` (wins), Den Den's defaults in `/usr/share/denden/noctalia/denden.toml`, palette `DenDen.json`; reloads live; `noctalia msg …` | `denden-desktop` |
-| Terminal | foot | `~/.config/foot/foot.ini` | `denden-desktop` |
+| Terminal | Ghostty running fish, with a starship prompt | `~/.config/ghostty/config.local` over Den Den's `/usr/share/denden/ghostty/config`; `~/.config/fish/config.fish` over `/usr/share/fish/vendor_conf.d/denden.fish`; prompt `~/.config/starship.toml` over `/usr/share/denden/starship.toml` | `denden-desktop` |
 | Browser and default apps | Helium | `~/.config/mimeapps.list` over `/etc/xdg/mimeapps.list` | `denden-desktop` |
 | GTK app theme | dconf | `gsettings set org.gnome.desktop.interface …`; defaults in `/etc/dconf/db/local.d/00-denden` | `denden-desktop` |
 | Agents | T3 Code (desktop app, `t3`), Claude Code, Codex | this file: `/etc/denden/AGENTS.md`, linked as each agent's user-level instructions | `denden-base`, `t3code-*` |
-| Shell environment | bash, mise | `/etc/profile.d/denden.sh` (login shells), `/usr/lib/environment.d/50-denden.conf` (desktop session) | `denden-base` |
+| Shell environment | bash (login shell; fish in the terminal starts from it), mise | `/etc/profile.d/denden.sh` (login shells), `/usr/lib/environment.d/50-denden.conf` (desktop session) | `denden-base` |
 | GitHub repositories | `denden-repos` (user timer) | `denden-repos.service`/`.timer` | `denden-base` |
 | Network and remote access | NetworkManager, Tailscale (`denden-tailscale`), `denden-firewall` | `/usr/share/denden/firewall.nft` | `denden-base` |
 | Backups | `denden-backup` (restic to the Den Den USB stick) | `/usr/share/denden/backup-excludes`; `denden-backup.timer` | `denden-base` |
