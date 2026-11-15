@@ -8,7 +8,7 @@
 
 pkgname=denden-boot
 pkgver=0.1.0
-pkgrel=4
+pkgrel=5
 pkgdesc='Den Den startup picker, recovery menu and boot splash'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -20,7 +20,12 @@ depends=(
 makedepends=('imagemagick' 'librsvg' 'python')
 source=('mushi.py' 'denden-boot-update' 'denden-boot.hook' 'denden.plymouth'
         'plymouth-quit-retain-splash.conf' 'denden-splash.hook')
-sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+sha256sums=('648af83bd5de0ff68cfa8d09bde1b23e0ca2742f87b4e1e1c2c7a28e13b31658'
+            '88ed91108ff0ec0735b8593cf18a9b2c13849b0ce44095e60d7dc4fd9f13adb7'
+            'cbdb8c5a1c79f7068bb96dc270b6125ad00bd47863790825d45ff8e275e27328'
+            '168ea1bec8b27d68b1bb04a6b1be11c6aa142dd1eef8e187c07a028dac0cb173'
+            '04d33b1ac5c2506b484577756d8a704aa128316a09fc9fd07ed57b8c31f68763'
+            '30a17055f05d1929627ab1a62d4d8bb7e79e6315c35e05c212cd70956ae7e09b')
 
 _fg='#eceef2'
 _bg='#07080a'   # also the splash background, in denden.plymouth
@@ -28,6 +33,7 @@ _bg='#07080a'   # also the splash background, in denden.plymouth
 build() {
   mkdir -p theme plymouth
   python mushi.py "${_fg}" > mushi.svg
+  python mushi.py "${_fg}" --small > mushi-small.svg   # for 32 px and below
   local mark=(magick -background none -density 192 mushi.svg -trim +repage)
 
   # Background for the picker and the recovery menu: near black with a wide,
@@ -40,14 +46,15 @@ build() {
   # Picker icons, the mark and a four-pane Windows logo of similar weight.
   "${mark[@]}" -resize 212x212 -gravity center -extent 256x256 theme/os_denden.png
   magick -size 256x256 xc:none -fill "${_fg}" \
-    -draw 'rectangle 70,70 124,124' -draw 'rectangle 132,70 186,124' \
-    -draw 'rectangle 70,132 124,186' -draw 'rectangle 132,132 186,186' theme/os_windows.png
+    -draw 'rectangle 58,58 124,124' -draw 'rectangle 132,58 198,124' \
+    -draw 'rectangle 58,132 124,198' -draw 'rectangle 132,132 198,198' theme/os_windows.png
   magick -size 216x216 xc:none -fill 'rgba(255,255,255,0.07)' \
     -stroke 'rgba(255,255,255,0.16)' -strokewidth 2 \
     -draw 'roundrectangle 1,1 214,214 32,32' theme/selection.png
 
-  # Splash: the mark, and a ring of twelve dots with a fading trail.
-  "${mark[@]}" -resize 260x260 plymouth/watermark.png
+  # Splash: the mark, small and calm, and a ring of twelve dots with a
+  # fading trail.
+  "${mark[@]}" -resize 168x168 plymouth/watermark.png
   local frame draw
   for frame in {0..11}; do
     # One -fill/-draw pair per dot; the dot at the frame's position is brightest.
@@ -68,7 +75,7 @@ package() {
   install -Dm644 plymouth-quit-retain-splash.conf \
     "${pkgdir}/usr/lib/systemd/system/plymouth-quit.service.d/denden-retain-splash.conf"
   install -Dm644 -t "${pkgdir}/usr/share/denden/boot/theme" theme/*
-  install -Dm644 mushi.svg "${pkgdir}/usr/share/denden/boot/mushi.svg"
+  install -Dm644 -t "${pkgdir}/usr/share/denden/boot" mushi.svg mushi-small.svg
 
   local theme="${pkgdir}/usr/share/plymouth/themes/denden"
   install -Dm644 -t "${theme}" denden.plymouth plymouth/*

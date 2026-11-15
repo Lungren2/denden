@@ -1,74 +1,107 @@
 #!/usr/bin/env python3
-"""Den Den Mushi silhouette in side profile, facing left: the Den Den mark.
+"""The Den Den mark: a Den Den Mushi in side profile, facing left, with the
+receiver on its shell. Solid shapes on a 512 grid, stacked back to front;
+each shape cuts a gap of one width into the shapes behind it, and smaller
+cuts inside a shape draw its detail (dial, coils, eyelid).
 
-mushi.py [COLOUR] > mushi.svg"""
+mushi.py [COLOUR] [--small] > mushi.svg
+  --small  for 32 px and below: wider gaps, a simpler dial and no eyelid"""
 import math
 import sys
 
-FG = sys.argv[1] if len(sys.argv) > 1 else "#fff"
+args = [a for a in sys.argv[1:] if not a.startswith("--")]
+FG = args[0] if args else "#fff"
+SMALL = "--small" in sys.argv
+G = 22 if SMALL else 13            # the gap width
+f = lambda v: f"{v:.1f}"
 
-def zigzag(points, amp, waves):
-    """Coiled cord: a zigzag along a quadratic Bezier."""
-    (x0, y0), (cx, cy), (x1, y1) = points
-    out = []
-    n = waves * 2
-    for i in range(n + 1):
-        t = i / n
-        x = (1-t)**2*x0 + 2*(1-t)*t*cx + t**2*x1
-        y = (1-t)**2*y0 + 2*(1-t)*t*cy + t**2*y1
-        dx = 2*(1-t)*(cx-x0) + 2*t*(x1-cx)
-        dy = 2*(1-t)*(cy-y0) + 2*t*(y1-cy)
-        l = math.hypot(dx, dy)
-        nx, ny = -dy/l, dx/l
-        s = 0 if i in (0, n) else (amp if i % 2 else -amp)
-        out.append((x + nx*s, y + ny*s))
-    return "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in out)
+BASE = 430                          # the sole
+SX, SY, SR = 304, 292, 124          # shell
 
-SX, SY, SR = 570, 530, 262          # shell
-dial = []
-for k in range(10):
-    a = math.radians(-60 + k*30)     # finger holes, leaving a gap at the bottom right
-    dial.append(f'<circle cx="{SX+68*math.cos(a):.1f}" cy="{SY+68*math.sin(a):.1f}" r="15" fill="black"/>')
+# Body: head, neck and foot as one shape. The front of the neck bows out
+# gently into the toe; the sole is flat; the tail tapers to a soft point and
+# its top curves up into the back of the shell.
+TAIL = 494
+body = (f'<path d="M110 {BASE} Q88 {BASE} 88 {BASE-17} Q88 {BASE-38} 118 {BASE-44} '
+        f'C142 {BASE-50} 150 {BASE-66} 144 {BASE-92} '
+        f'C128 {BASE-148} 86 {BASE-196} 78 {BASE-240} '
+        f'C72 {BASE-276} 98 {BASE-296} 130 {BASE-294} '
+        f'C166 {BASE-292} 186 {BASE-264} 192 {BASE-232} '
+        f'L{SX-20} {BASE-70} L{SX+86} {BASE-80} '
+        f'C{SX+112} {BASE-44} {TAIL-74} {BASE-28} {TAIL-18} {BASE-17} '
+        f'Q{TAIL} {BASE-13} {TAIL} {BASE-7} Q{TAIL} {BASE} {TAIL-20} {BASE} Z"/>')
 
-svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <defs>
-    <mask id="cut">
-      <rect width="1024" height="1024" fill="white"/>
-      <!-- rotary dial on the side of the shell -->
-      <circle cx="{SX}" cy="{SY}" r="108" fill="none" stroke="black" stroke-width="16"/>
-      {"".join(dial)}
-      <circle cx="{SX}" cy="{SY}" r="30" fill="black"/>
-      <!-- shell rim, separating the shell from the head and the foot -->
-      <path d="M{SX-SR-9} {SY} A{SR+9} {SR+9} 0 0 0 {SX+SR*0.62:.0f} {SY+SR*0.83:.0f}" fill="none" stroke="black" stroke-width="16"/>
-      <!-- handset resting on the shell -->
-      <path d="M{SX-200} {SY-SR+58} A{SR+12} {SR+12} 0 0 1 {SX+200} {SY-SR+58}" fill="none" stroke="black" stroke-width="16"/>
-      <!-- mouth -->
-      <path d="M80 610 Q150 602 214 614" fill="none" stroke="black" stroke-width="16" stroke-linecap="round"/>
-    </mask>
-  </defs>
-  <g fill="{FG}" mask="url(#cut)">
-    <!-- foot: flat sole, rounded front, tapering tail -->
-    <path d="M150 820 Q120 820 124 792 Q130 760 190 752 L820 742 Q900 740 960 790 Q975 806 950 812 L870 822 Z"/>
-    <!-- head and neck -->
-    <path d="M168 790 Q150 700 140 650 Q112 640 108 612 Q108 588 140 576 Q150 520 170 470
-             Q190 410 250 400 Q320 396 336 470 Q348 560 340 760 Z"/>
-    <!-- lips -->
-    <ellipse cx="138" cy="584" rx="64" ry="34"/>
-    <ellipse cx="150" cy="636" rx="58" ry="32"/>
-    <!-- eye stalks and eyes -->
-    <path d="M222 420 Q200 340 168 270" fill="none" stroke="{FG}" stroke-width="34" stroke-linecap="round"/>
-    <circle cx="160" cy="248" r="46"/>
-    <path d="M280 412 Q282 330 270 262" fill="none" stroke="{FG}" stroke-width="30" stroke-linecap="round"/>
-    <circle cx="268" cy="238" r="40"/>
-    <!-- shell -->
-    <circle cx="{SX}" cy="{SY}" r="{SR}"/>
-    <!-- handset along the top of the shell -->
-    <path d="M{SX-150} {SY-SR-22} Q{SX} {SY-SR-110} {SX+150} {SY-SR-22}" fill="none" stroke="{FG}" stroke-width="44" stroke-linecap="round"/>
-    <ellipse cx="{SX-172}" cy="{SY-SR+8}" rx="64" ry="34" transform="rotate(22 {SX-172} {SY-SR+8})"/>
-    <ellipse cx="{SX+172}" cy="{SY-SR+8}" rx="64" ry="34" transform="rotate(-22 {SX+172} {SY-SR+8})"/>
-    <!-- coiled cord from the handset down the back of the shell to the tail -->
-    <path d="{zigzag(((SX+226, SY-SR+30), (SX+340, SY-40), (SX+330, 770)), 18, 8)}"
-          fill="none" stroke="{FG}" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
-  </g>
-</svg>'''
-print(svg)
+# Eye: one thick stalk straight up from the crown (the far one is hidden in
+# profile), a round eye, and a heavy lid cut across it.
+EX, EY, ER = 132, 58, 33
+CROWN = BASE - 294
+body += (f'<path d="M{EX} {CROWN+30} L{EX} {EY}" fill="none" stroke-width="24" '
+         f'stroke-linecap="round"/>')
+eye = f'<circle cx="{EX}" cy="{EY}" r="{ER}"/>'
+lid = (f'<path d="M{EX-ER-4} {EY-3} Q{EX} {EY+9} {EX+ER+4} {EY-3}" fill="none" '
+       f'stroke-width="{f(G*0.7)}" stroke-linecap="round"/>')
+
+# Receiver: a cup standing on the top of the shell, and its cap.
+def trapezoid(x0, x1, y0, x2, x3, y1, rad, grow=0):
+    """Bottom edge x0..x1 at y0, top edge x2..x3 at y1. Stroking rounds the
+    corners; `grow` widens the stroke, for the gap it cuts behind it."""
+    return (f'<path d="M{x0} {y0} L{x1} {y0} L{x3} {y1} L{x2} {y1} Z" '
+            f'stroke-width="{2*(rad+grow)}" stroke-linejoin="round"/>')
+CUP = (SX-100, SX+100, 196, SX-80, SX+80, 136, 10)
+CAP = (SX-50, SX+50, 136-G, SX-42, SX+42, 136-G-16, 8)
+
+# Cord: a band around the back of the shell from the receiver down into the
+# tail, with slanted cuts for its coils.
+CW = 34 if SMALL else 26            # band width
+CR = SR + G + CW / 2                # its centreline radius
+A0, A1 = -74, 58                    # degrees, receiver end to tail end
+def polar(a, r):
+    return (SX + r*math.cos(math.radians(a)), SY + r*math.sin(math.radians(a)))
+p0, p1 = polar(A0, CR), polar(A1, CR)
+cord = (f'<path d="M{f(p0[0])} {f(p0[1])} A{f(CR)} {f(CR)} 0 0 1 {f(p1[0])} {f(p1[1])}" '
+        f'fill="none" stroke-width="{CW}" stroke-linecap="round"/>')
+def coils():
+    step = 17 if SMALL else 10.5
+    s, a = '', A0 + step
+    while a < A1 - step / 2:
+        i, o = polar(a - 3.5, CR - CW), polar(a + 3.5, CR + CW)
+        s += (f'<path d="M{f(i[0])} {f(i[1])} L{f(o[0])} {f(o[1])}" fill="none" '
+              f'stroke-width="{f(G*0.55)}"/>')
+        a += step
+    return s
+
+# Dial: a ring with nine finger holes inside it, leaving the gap where the
+# finger stop is, and a hub. The small mark keeps the ring and a larger hub.
+def dial():
+    s = f'<circle cx="{SX}" cy="{SY}" r="{f(SR*0.5)}" fill="none" stroke-width="{f(G*0.6)}"/>'
+    if SMALL:
+        return s + f'<circle cx="{SX}" cy="{SY}" r="{f(SR*0.2)}"/>'
+    for k in range(9):
+        a = math.radians(100 + k*31)
+        s += (f'<circle cx="{f(SX + SR*0.33*math.cos(a))}" cy="{f(SY + SR*0.33*math.sin(a))}" '
+              f'r="{f(SR*0.068)}"/>')
+    return s + f'<circle cx="{SX}" cy="{SY}" r="{f(SR*0.11)}"/>'
+
+def grown(markup):
+    """A shape grown by the gap: what it cuts out of the shapes behind it."""
+    return f'<g stroke-width="{2*G}" stroke-linejoin="round">{markup}</g>'
+
+# Back to front: (shape, what it cuts behind it, its own inner cuts).
+layers = [
+    (cord, None, coils()),
+    (body, grown(body), ''),
+    (eye, grown(eye), '' if SMALL else lid),
+    (f'<circle cx="{SX}" cy="{SY}" r="{SR}"/>', grown(f'<circle cx="{SX}" cy="{SY}" r="{SR}"/>'), dial()),
+    (trapezoid(*CUP), trapezoid(*CUP, grow=G), ''),
+    (trapezoid(*CAP), trapezoid(*CAP, grow=G), ''),
+]
+
+defs = out = ''
+for i, (shape, _, inner) in enumerate(layers):
+    cuts = ''.join(l[1] for l in layers[i+1:]) + inner
+    defs += (f'<mask id="m{i}" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">'
+             f'<rect width="512" height="512" fill="#fff"/>'
+             f'<g fill="#000" stroke="#000">{cuts}</g></mask>')
+    out += f'<g mask="url(#m{i})" fill="{FG}" stroke="{FG}" stroke-width="0">{shape}</g>'
+print(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">'
+      f'<defs>{defs}</defs>{out}</svg>')
