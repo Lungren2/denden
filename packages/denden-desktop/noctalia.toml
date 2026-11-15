@@ -37,7 +37,7 @@ transition = ["fade"]
 transition_duration = 600
 
 [wallpaper.default]
-path = "/usr/share/denden/boot/theme/background.png"
+path = "/usr/share/denden/wallpaper/denden.png"
 
 [lockscreen]
 transition = ["fade"]
