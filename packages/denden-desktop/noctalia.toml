@@ -5,18 +5,29 @@
 
 [shell]
 polkit_agent = true                 # password prompts as dialogs, not terminals
-corner_radius_scale = 0.8
+corner_radius_scale = 1.0
+font_family = "Adwaita Sans"
 telemetry_enabled = false
 setup_wizard_enabled = false      # Den Den has already made these choices
 
+# Panels are frosted glass: niri blurs what is behind them, and a hairline
+# outline and a soft shadow set them off it.
 [shell.panel]
-transparency_mode = "soft"
+transparency_mode = "glass"
+borders = true
+border_width = 1.0
+shadow = true
 launcher_placement = "floating"
-launcher_position = "center"
+launcher_position = "bottom_center"   # rises from the taskbar, like Start
 
+# The launcher: search on top, pinned apps in a grid below it.
 [shell.launcher]
 pinned = ["t3code", "helium", "org.gnome.Nautilus", "foot"]
 default_view = "pinned"
+search_position = "top"
+width = 640
+app_grid = true
+show_app_origin_indicator = false
 
 [shell.window_switcher]
 style = "carousel"
@@ -48,32 +59,63 @@ timeout = 900
 action = "screen_off"
 enabled = true
 
-# One bar along the bottom, like a taskbar: the Den Den mark opens the
-# launcher, then your apps; status, notifications and the clock on the right.
+# One floating glass bar along the bottom, like a taskbar: the Den Den mark
+# and your apps in the middle; status, notifications and the clock on the
+# right.
+#
+# Every button is the same size: 40 px tall (capsule_thickness of the bar),
+# with a 24 px icon, and its hover is a rounded square (capsule_radius).
+# App buttons sit 4 px apart, and widget_spacing puts the launcher the same
+# distance from them, allowing for its hover's overhang (capsule_padding).
 [bar.main]
 position = "bottom"
-thickness = 44
-background_opacity = 0.9
+thickness = 48
+background_opacity = 0.62
 compositor_blur = true
-radius = 12
+radius = 16
 margin_ends = 8
 margin_edge = 8
-padding = 10
-widget_spacing = 4
+padding = 6
+widget_spacing = 12
+capsule_thickness = 0.84
+capsule_radius = 8
+capsule_padding = 6
 shadow = true
-start = ["launcher", "taskbar"]
-center = []
+start = []
+center = ["launcher", "taskbar"]
 end = ["tray", "media", "network", "bluetooth", "volume", "brightness", "battery", "notifications", "clock", "control-center"]
 
 [widget.launcher]
-custom_image = "/usr/share/denden/boot/mushi.svg"
+custom_image = "/usr/share/denden/boot/mushi-small.svg"
 custom_image_colorize = true
+scale = 1.5                         # a 24 px mark, like the app icons
+capsule_padding = 5                 # a 39 px hover; must be a whole number
 
 [widget.taskbar]
 pinned = ["t3code", "helium", "org.gnome.Nautilus", "foot"]
 pinned_opacity = 0.55
-icon_scale = 1.1
-item_spacing = 6
+icon_scale = 1.5                    # 24 px icons
+item_spacing = 4
+
+# Status shows icons only; each one's text slides out on hover.
+[widget.network]
+peek = true
+
+[widget.bluetooth]
+peek = true
+
+[widget.volume]
+peek = true
+
+[widget.brightness]
+peek = true
+
+[widget.battery]
+peek = true
+
+# Quick settings: a neutral controls icon rather than Noctalia's logo.
+[widget.control-center]
+glyph = "adjustments-horizontal"
 
 [widget.media]
 hide_when_no_media = true

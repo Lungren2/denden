@@ -36,7 +36,8 @@ depends=(
   # The browser, which sign-ins from agents and CLIs open in too. Prebuilt
   # from CachyOS for now; a source build is on the roadmap.
   'helium-browser-bin'
-  'noto-fonts' 'noto-fonts-emoji'
+  # The shell's typeface, and fallbacks
+  'adwaita-fonts' 'noto-fonts' 'noto-fonts-emoji'
   # Tools the user's projects need
   'godot' 'blender'
 )
@@ -60,7 +61,7 @@ source=(
 sha256sums=(
   'b8e08f95f33bb050e97ea22cec9a9f7b4799cb438ad94af886763fb37e4c5184'
   '406af170d75bc8173d74e62d8b145fb8c5850e31f3144891a0120fa070e8b870'
-  '64e09b7ec0bbd591a9fd8deccca12812b626998379ad571dc00182ca576b7634'
+  'd698aff8f74646d926472715a9827bea5668e91e513b8bd19032ef3d2ac4c608'
   'daba5531decf23aa3008a81ed9a1678443f146385f3064682de219adc004d7ae'
   '1be143020d6d0c0ad89c28e1c85a8fd045bb68568b5eb93cdb1824ff75f9c665'
   '4af02bb4a6365e718a30283d4c2fd11d124af6d8ecca48f695e4690e1e2e0beb'
