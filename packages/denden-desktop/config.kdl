@@ -42,8 +42,88 @@ layout {
     focus-ring {
         off
     }
+    // A hairline edge, as on macOS and Windows 11: light catching the rim,
+    // a touch brighter on the window you're in.
     border {
-        off
+        width 1
+        active-color "#ffffff26"
+        inactive-color "#ffffff12"
+    }
+    // A soft shadow lifts windows off the desktop and apart from each other.
+    shadow {
+        on
+        softness 36
+        spread 0
+        offset x=0 y=10
+        color "#0000008c"
+        inactive-color "#00000059"
+    }
+}
+
+// Background blur, for the taskbar and panels (Noctalia asks for it). It
+// samples the wallpaper only (xray, like Windows 11's Mica) unless a rule
+// below says otherwise; saturation keeps the colour behind it alive.
+blur {
+    passes 3
+    offset 4
+    noise 0.025
+    saturation 1.4
+}
+
+// Panels that open over windows (launcher, quick settings, notifications,
+// volume and the window switcher) blur what is really behind them.
+layer-rule {
+    match namespace="^noctalia-(panel|attached-panel|notification|osd|window-switcher)"
+    background-effect {
+        xray false
+    }
+}
+
+// Motion: springs for anything that moves, so it slows into place the way
+// a real object does; windows grow in from slightly smaller and fade.
+animations {
+    workspace-switch {
+        spring damping-ratio=1.0 stiffness=900 epsilon=0.0001
+    }
+    horizontal-view-movement {
+        spring damping-ratio=1.0 stiffness=650 epsilon=0.0001
+    }
+    window-movement {
+        spring damping-ratio=1.0 stiffness=700 epsilon=0.0001
+    }
+    window-resize {
+        spring damping-ratio=1.0 stiffness=700 epsilon=0.0001
+    }
+    overview-open-close {
+        spring damping-ratio=1.0 stiffness=700 epsilon=0.0001
+    }
+    window-open {
+        duration-ms 260
+        curve "cubic-bezier" 0.2 0.9 0.1 1.0
+        custom-shader r"
+            vec4 open_color(vec3 coords_geo, vec3 size_geo) {
+                float p = niri_clamped_progress;
+                float scale = 0.94 + 0.06 * p;
+                vec2 origin = vec2(0.5, 0.6);
+                coords_geo = vec3((coords_geo.xy - origin) / scale + origin, 1.0);
+                vec3 coords_tex = niri_geo_to_tex * coords_geo;
+                return texture2D(niri_tex, coords_tex.st) * clamp(p * 1.7, 0.0, 1.0);
+            }
+        "
+    }
+    window-close {
+        duration-ms 170
+        curve "cubic-bezier" 0.4 0.0 1.0 1.0
+        custom-shader r"
+            vec4 close_color(vec3 coords_geo, vec3 size_geo) {
+                float p = niri_clamped_progress;
+                float scale = 1.0 - 0.05 * p;
+                vec2 origin = vec2(0.5, 0.6);
+                coords_geo = vec3((coords_geo.xy - origin) / scale + origin, 1.0);
+                vec3 coords_tex = niri_geo_to_tex * coords_geo;
+                return texture2D(niri_tex, coords_tex.st) * (1.0 - p);
+            }
+        "
     }
 }
 

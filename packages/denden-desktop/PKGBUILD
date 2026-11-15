@@ -11,7 +11,7 @@
 
 pkgname=denden-desktop
 pkgver=0.1.0
-pkgrel=5
+pkgrel=6
 pkgdesc='Den Den desktop: a Niri session with T3 Code as the main window'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -56,7 +56,7 @@ source=(
   '50-niri-limit-free-buffer-pool.json'
 )
 sha256sums=(
-  '2be2ab4ee15e0f1e40aebd612f1ed7f0094725a3d7c22c4da43e738b9015cda7'
+  'b8e08f95f33bb050e97ea22cec9a9f7b4799cb438ad94af886763fb37e4c5184'
   '406af170d75bc8173d74e62d8b145fb8c5850e31f3144891a0120fa070e8b870'
   '762d708cf97e502d4eccff7c4b4ce42ef4b953176a5c993bc7b9c5a431f8b120'
   'daba5531decf23aa3008a81ed9a1678443f146385f3064682de219adc004d7ae'
