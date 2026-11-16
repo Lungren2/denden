@@ -9,7 +9,7 @@
 
 pkgname=denden-base
 pkgver=0.1.0
-pkgrel=8
+pkgrel=9
 pkgdesc='Den Den base system: agents, toolchains, snapshots and the agent contract'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -34,8 +34,9 @@ depends=(
   # Terminal tools
   'fzf' 'zoxide' 'lazygit' 'git-delta' 'btop' 'dust' 'duf' 'hyperfine'
   'go-yq' 'tmux'
-  # Remote access, and a firewall that only lets it in
-  'tailscale' 'nftables'
+  # Remote access, and a firewall that only lets it in; Wi-Fi's per-country
+  # rules, which the kernel otherwise falls back from to the most cautious
+  'tailscale' 'nftables' 'wireless-regdb'
   # Backups
   'restic' 'gptfdisk' 'e2fsprogs'
 )
