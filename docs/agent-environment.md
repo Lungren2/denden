@@ -156,9 +156,9 @@ tools.
 - The OS layer ships as **Arch packages** (`packages/` PKGBUILDs) that install
   on any Arch system. The ISO just includes them. The same layer can later sit
   on top of CachyOS repos without changing anything here.
-- **Develop in Arch WSL.** Systemd, bubblewrap, pacman and the daemon all work
-  there. Btrfs features can use a loopback Btrfs image. Only agent desktops and
-  hardware features need real hardware.
+- **Develop on Den Den.** Each machine carries this repo at `/src/denden`;
+  packages build and install there (`denden-update apply`), and
+  `scripts/test-install.sh` boots the installer and the start in a VM.
 
 ## Milestones
 

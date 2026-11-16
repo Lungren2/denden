@@ -51,7 +51,6 @@ sudo. Snapshots before every pacman transaction are the safety net, and
 What the machine needs before it is the one you work on every day.
 - [x] Helium as the default browser (`helium-browser-bin` from CachyOS), which
   sign-ins from agents and CLIs open in too; Firefox removed
-- [ ] Helium built from source (a Chromium build), the prebuilt kept as `-bin`
 - [ ] Microsoft Edge as the alternative (`microsoft-edge-stable-bin`: no public
   source), once packages built here update themselves: a browser can't sit on
   a pinned version
