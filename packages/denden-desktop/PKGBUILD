@@ -11,7 +11,7 @@
 
 pkgname=denden-desktop
 pkgver=0.1.0
-pkgrel=7
+pkgrel=8
 pkgdesc='Den Den desktop: a Niri session with T3 Code as the main window'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -34,10 +34,13 @@ depends=(
   'libnotify'
   # GTK apps in the dark theme
   'adw-gtk-theme' 'dconf'
-  # Audio, and the microphone T3 Code's voice input uses
-  'pipewire' 'pipewire-pulse' 'pipewire-alsa' 'wireplumber'
+  # Audio, and the microphone T3 Code's voice input uses; rtkit lets
+  # PipeWire run at realtime priority, so sound doesn't crackle under load
+  'pipewire' 'pipewire-pulse' 'pipewire-alsa' 'wireplumber' 'rtkit'
+  # Bluetooth, for headphones and the quick settings' Bluetooth toggle
+  'bluez' 'bluez-utils'
   # The browser, which sign-ins from agents and CLIs open in too. Prebuilt
-  # from CachyOS for now; a source build is on the roadmap.
+  # from CachyOS: a Chromium build here isn't worth its hours.
   'helium-browser-bin'
   # The shell's typeface, and fallbacks
   'adwaita-fonts' 'noto-fonts' 'noto-fonts-emoji'
@@ -122,6 +125,18 @@ package() {
   install -Dm644 -t "${pkgdir}/usr/lib/systemd/user" denden-backup-reminder.service denden-backup-reminder.timer
   install -d "${pkgdir}/usr/lib/systemd/user/timers.target.wants"
   ln -s ../denden-backup-reminder.timer "${pkgdir}/usr/lib/systemd/user/timers.target.wants/denden-backup-reminder.timer"
+
+  # The session counts as a user's desktop session for services the user's
+  # systemd starts, such as Files' search indexer (LocalSearch), which
+  # otherwise refuses to run: greetd's session doesn't pass the class on.
+  printf 'XDG_SESSION_CLASS=user\n' \
+    | install -Dm644 /dev/stdin "${pkgdir}/usr/lib/environment.d/60-denden-desktop.conf"
+
+  # Bluetooth starts when the machine has an adapter (bluetooth.target is
+  # pulled in by the hardware), as `systemctl enable bluetooth` would.
+  install -d "${pkgdir}/usr/lib/systemd/system/bluetooth.target.wants"
+  ln -s ../bluetooth.service "${pkgdir}/usr/lib/systemd/system/bluetooth.target.wants/bluetooth.service"
+  ln -s bluetooth.service "${pkgdir}/usr/lib/systemd/system/dbus-org.bluez.service"
 
   # Helium opens web links and pages; Files opens folders.
   install -Dm644 mimeapps.list "${pkgdir}/etc/xdg/mimeapps.list"
