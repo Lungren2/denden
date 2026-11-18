@@ -12,8 +12,8 @@
 # executable embeds the system's Node instead of upstream's pinned release.
 
 pkgname=t3code-cli
-pkgver=0.1.9
-pkgrel=2
+pkgver=0.1.10
+pkgrel=1
 pkgdesc='T3 Code control plane for coding agents (headless server and CLI)'
 arch=('x86_64')
 url='https://github.com/pingdotgg/t3code'
@@ -40,7 +40,7 @@ source=(
   'skip-libatomic-bundle.patch'
 )
 sha256sums=(
-  '0508e785d016f5733f36ea602a545ca16dde8addf3838d127d48c029f2427628'
+  '2aca6254a70e4fe6e868ae17813e7d71cef3bbf2495e1a1119da8afc98612227'
   '40bf267d93cb916cb18fb6429dd14a05fdc9adea898b34dc8ca58f95fc118160'
 )
 
