@@ -1,12 +1,34 @@
 #!/usr/bin/env bash
-# Publish completed packages; leave old archives available for recovery.
+# Publish completed packages to a Den Den repository; old archives stay on
+# disk for recovery.
+#
+#   denden-publish PACKAGE…                   to [denden], Den Den's own packages
+#   denden-publish --local PACKAGE…           to [denden-local], this machine's builds
+#                                             from /src (den src build)
+#   denden-publish --local --remove NAME…     take packages out of [denden-local]
 set -euo pipefail
 [[ ${EUID} -eq 0 ]] || { echo 'Run denden-publish with sudo.' >&2; exit 1; }
-(($#)) || { echo 'Usage: denden-publish PACKAGE…' >&2; exit 1; }
-repo=${DENDEN_REPO:-/var/lib/denden/repo}
+repo=${DENDEN_REPO:-/var/lib/denden/repo} db=denden remove=0
+while [[ ${1:-} == --* ]]; do
+  case $1 in
+    --local) repo=/var/lib/denden/local db=denden-local ;;
+    --remove) remove=1 ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+  shift
+done
+(($#)) || { echo 'Usage: denden-publish [--local] [--remove] PACKAGE…' >&2; exit 1; }
 install -d -m755 "$repo"
 exec 9>/run/lock/denden-publish.lock
 flock 9
+if ((remove)); then
+  for name in "$@"; do
+    [[ $name =~ ^[a-zA-Z0-9@._+-]+$ ]] || { echo "Not a package name: $name" >&2; exit 1; }
+  done
+  repo-remove "$repo/$db.db.tar.gz" "$@"
+  chmod a+r "$repo/$db".*.tar.gz
+  exit 0
+fi
 files=()
 for package in "$@"; do
   [[ -f $package && ! -L $package ]] || { echo "Not a package file: $package" >&2; exit 1; }
@@ -25,5 +47,5 @@ for package in "$@"; do
 done
 # repo-add writes the database through a temporary file and renames it.
 # -p refuses to replace an existing entry with an older version.
-repo-add --prevent-downgrade "$repo/denden.db.tar.gz" "${files[@]}"
-chmod a+r "$repo"/denden*.tar.gz
+repo-add --prevent-downgrade "$repo/$db.db.tar.gz" "${files[@]}"
+chmod a+r "$repo/$db".*.tar.gz

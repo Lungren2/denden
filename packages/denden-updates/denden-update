@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import urllib.request
@@ -94,6 +95,16 @@ def check(root):
             if built and target and output('vercmp', target, built) == '1':
                 messages.append(f'{name}: built with {runtime} {built}, repository has {target}; bump pkgrel and rebuild')
             break
+    # Programs changed from source (den src): their [local] build shadows the
+    # distro's, so a newer distro version needs the changes carried onto it.
+    if shutil.which('den'):
+        try:
+            for tree in json.loads(output('den', 'src', 'list', '--json')):
+                if tree['rebase_needed']:
+                    messages.append(f"{tree['pkgbase']}: changed in {tree['tree']}; the distro has "
+                                    f"{tree['distro']} (yours is on {tree['upstream']}) — den src rebase {tree['pkgbase']}")
+        except Exception as exc:
+            errors.append(f'den src list: {exc}')
     return {'updates': messages, 'errors': errors}
 
 
