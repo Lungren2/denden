@@ -51,9 +51,6 @@ sudo. Snapshots before every pacman transaction are the safety net, and
 What the machine needs before it is the one you work on every day.
 - [x] Helium as the default browser (`helium-browser-bin` from CachyOS), which
   sign-ins from agents and CLIs open in too; Firefox removed
-- [ ] Microsoft Edge as the alternative (`microsoft-edge-stable-bin`: no public
-  source), now that recipes update themselves: a browser can't sit on a pinned
-  version
 - [x] `linux-cachyos-lts` beside `linux-cachyos`, as the fallback kernel in
   the recovery menu
 - [x] Reachable from anywhere: T3 Connect through the desktop app's own
