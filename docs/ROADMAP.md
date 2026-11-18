@@ -74,7 +74,10 @@ What the machine needs before it is the one you work on every day.
   performs a full pacman upgrade
 - [ ] Automated upstream recipe updates and patch rebases (failed builds need
   review); signed remote publishing for other Den Den machines
-- [ ] A setup wizard for the GitHub sign-in and the other first-run choices
+- [x] A setup wizard for the GitHub sign-in and the other first-run choices
+  (`denden-setup`: GitHub, Tailscale and backups in one window)
+- [x] The desktop in T3 Code's design system: its palette, Inter, glass and
+  radii across the shell, GTK apps, terminal and windows
 - [x] Agent CLIs found from a non-interactive login shell, and from the
   desktop session: `~/.local/bin` and mise's shims on every `PATH`
 - [x] Per-project runtimes with mise (a project's `mise.toml` wins over the
