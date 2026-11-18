@@ -1,0 +1,24 @@
+# Maintainer: Ethan <ethanogle012@outlook.com>
+#
+# den, Den Den's command line. `den src` changes any program on the system
+# from its source: it fetches the distro's recipe and source into
+# /src/<pkgbase> as a git repo, builds it into the [denden-local] repo (ranked above
+# every other repo in pacman.conf), and carries the changes onto new distro
+# versions.
+
+pkgname=den
+pkgver=0.1.0
+pkgrel=4
+pkgdesc="Den Den's command line: change any program from its source"
+arch=('any')
+url='https://github.com/Lungren2/denden'
+license=('MIT')
+depends=('python' 'pacman' 'expac' 'devtools' 'git' 'gnupg' 'base-devel'
+         'denden-updates')        # denden-publish
+install=den.install
+source=('den')
+sha256sums=('e74c796643d13e65e58c93dad9f879306cfdaa456e01e5eaac2ed560093a6824')
+
+package() {
+  install -Dm755 den "${pkgdir}/usr/bin/den"
+}

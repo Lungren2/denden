@@ -1,0 +1,13 @@
+# [denden-local] must exist before pacman.conf lists it, or every sync fails.
+# repo-add won't write a database without packages, so start with an empty
+# archive (what repo-remove leaves when the last package goes).
+post_install() {
+  local repo=/var/lib/denden/local db
+  install -d -m755 "$repo"
+  for db in denden-local.db denden-local.files; do
+    [[ -e $repo/$db.tar.gz ]] || bsdtar -czf "$repo/$db.tar.gz" -T /dev/null
+    [[ -e $repo/$db ]] || ln -s "$db.tar.gz" "$repo/$db"
+  done
+  chmod a+r "$repo"/denden-local.*.tar.gz
+}
+post_upgrade() { post_install; }

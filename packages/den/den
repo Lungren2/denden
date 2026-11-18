@@ -1,0 +1,415 @@
+#!/usr/bin/python3
+"""den: Den Den's command line. For now, `den src`: change any program on the
+system from its source.
+
+  den src get <pkg>      fetch the recipe and source of the installed version
+                         into /src/<pkgbase>, as a git repo
+  den src build <pkg>    build /src/<pkgbase> as it is, publish it to the
+                         [denden-local] repo and install it
+  den src diff <pkg>     your changes against the upstream package
+  den src rebase <pkg>   carry your changes onto the version the distro has now
+  den src drop <pkg>     go back to the distro's package (the tree stays)
+  den src list           trees in /src, and which need a rebase
+
+Each tree's history has two branches. `upstream` holds the package exactly as
+the distro builds it, one commit per version: the recipe, plus the source
+after makepkg's prepare(). `main` is upstream plus your commits. Builds go to
+[denden-local], which pacman.conf ranks above every other repo, so your build shadows
+the distro's until you drop it; when the distro moves on, `den src list` (and
+the daily update check) says so, and `den src rebase` replays your commits.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+
+SRC = Path(os.environ.get('DEN_SRC', '/src'))
+CACHE = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'denden'
+RECIPES = CACHE / 'recipes'
+SOURCES = CACHE / 'sources'
+BUILDS = CACHE / 'build'
+LOCAL = 'denden-local'                     # the repo's name in pacman.conf
+CACHYOS_PKGBUILDS = 'https://github.com/CachyOS/CachyOS-PKGBUILDS.git'
+# Repos whose packages are Arch recipes, possibly rebuilt by CachyOS for a
+# newer CPU level (with a ".N" added to pkgrel).
+ARCH_REPOS = re.compile(r'^(core|extra|multilib|cachyos-(core|extra)-(v3|v4|znver4))$')
+
+
+class Fail(Exception):
+    pass
+
+
+def say(*parts):
+    print('den:', *parts, file=sys.stderr, flush=True)
+
+
+def run(*args, cwd=None, env=None, capture=False, check=True):
+    result = subprocess.run([str(a) for a in args], cwd=cwd, text=True,
+                            env=dict(os.environ, **(env or {})),
+                            stdout=subprocess.PIPE if capture else None)
+    if check and result.returncode != 0:
+        raise Fail(f'{" ".join(map(str, args[:3]))} … failed (exit {result.returncode})')
+    return result.stdout.strip() if capture else result.returncode
+
+
+def out(*args, cwd=None):
+    return run(*args, cwd=cwd, capture=True, env={'LC_ALL': 'C'})
+
+
+def git(tree, *args, capture=False, check=True):
+    return run('git', '-C', tree, *args, capture=capture, check=check)
+
+
+# ---- Package facts ------------------------------------------------------------
+
+def pkgbase(pkg):
+    for flag in ('-S', '-Q'):
+        base = subprocess.run(['expac', flag, '%e', pkg], text=True, capture_output=True).stdout.split()
+        if base:
+            return base[0]
+    raise Fail(f'no package called {pkg}')
+
+
+def repos_of(pkg):
+    """[(repo, version)] in pacman.conf order."""
+    lines = subprocess.run(['expac', '-S', '%r %v', pkg], text=True, capture_output=True).stdout.splitlines()
+    return [tuple(line.split()) for line in lines if line.strip()]
+
+
+def distro_version(pkg):
+    """The repo and version pacman would install without [denden-local]."""
+    for repo, version in repos_of(pkg):
+        if repo != LOCAL:
+            return repo, version
+    raise Fail(f'{pkg} is in no repository')
+
+
+def installed_version(pkg):
+    r = subprocess.run(['pacman', '-Q', pkg], text=True, capture_output=True)
+    return r.stdout.split()[1] if r.returncode == 0 else None
+
+
+def arch_tag(version):
+    """1:710-1.1 → 1-710-1 (Arch's tag; CachyOS's rebuild suffix dropped)."""
+    epoch, _, rest = version.rpartition(':')
+    ver, _, rel = rest.rpartition('-')
+    rel = rel.split('.')[0]
+    return f'{epoch + "-" if epoch else ""}{ver}-{rel}'
+
+
+def newer(version, than, origin):
+    """Is the distro's `version` newer than the recipe version `than`? For Arch
+    recipes CachyOS's rebuild suffix (1.1 for pkgrel 1) doesn't count."""
+    if origin == 'arch':
+        version = arch_tag(version).replace('-', ':', 1) if ':' in version else arch_tag(version)
+    r = subprocess.run(['vercmp', version, than], text=True, capture_output=True).stdout.strip()
+    return r == '1'
+
+
+def tree_of(pkg):
+    base = pkgbase(pkg)
+    tree = SRC / base
+    meta = tree / '.git' / 'den.json'
+    if not meta.is_file():
+        raise Fail(f'no source tree for {base}; run: den src get {pkg}')
+    return base, tree, json.loads(meta.read_text())
+
+
+def save_meta(tree, meta):
+    (tree / '.git' / 'den.json').write_text(json.dumps(meta, indent=2) + '\n')
+
+
+# ---- Recipes ------------------------------------------------------------------
+
+def arch_recipe(base, version):
+    """Check out Arch's recipe for `version` in the recipe cache; return its dir."""
+    RECIPES.mkdir(parents=True, exist_ok=True)
+    clone = RECIPES / base
+    if not clone.is_dir():
+        run('pkgctl', 'repo', 'clone', '--protocol=https', base, cwd=RECIPES)
+    git(clone, 'fetch', '--quiet', '--tags', 'origin')
+    tag = arch_tag(version)
+    if git(clone, 'rev-parse', '-q', '--verify', f'refs/tags/{tag}', capture=True, check=False):
+        git(clone, 'checkout', '--quiet', '--detach', tag)
+    else:
+        say(f'no recipe tagged {tag}; using the newest one')
+        git(clone, 'checkout', '--quiet', '--detach', 'origin/HEAD')
+    return clone
+
+
+def cachyos_recipe(base):
+    RECIPES.mkdir(parents=True, exist_ok=True)
+    clone = RECIPES / 'CachyOS-PKGBUILDS'
+    if not clone.is_dir():
+        run('git', 'clone', '--quiet', '--filter=blob:none', '--sparse', CACHYOS_PKGBUILDS, clone)
+    git(clone, 'pull', '--quiet', '--ff-only')
+    paths = out('git', '-C', clone, 'ls-tree', '-r', '--name-only', 'HEAD').splitlines()
+    dirs = [p.rsplit('/', 1)[0] for p in paths if p.endswith('/PKGBUILD')]
+    match = [d for d in dirs if d.rsplit('/', 1)[-1] == base]
+    if not match:
+        raise Fail(f'{base} not found in CachyOS-PKGBUILDS')
+    git(clone, 'sparse-checkout', 'add', match[0])
+    return clone / match[0]
+
+
+def recipe_for(origin, base, version):
+    if origin == 'arch':
+        return arch_recipe(base, version)
+    return cachyos_recipe(base)
+
+
+def origin_of(repo):
+    if repo == 'denden':
+        return 'denden'
+    if ARCH_REPOS.match(repo):
+        return 'arch'
+    if repo.startswith('cachyos'):
+        return 'cachyos'
+    raise Fail(f'packages from [{repo}] have no known recipe source')
+
+
+# ---- Trees --------------------------------------------------------------------
+
+def fill(tree, recipe):
+    """Put `recipe` in `tree` and run makepkg up to prepare(): the package's
+    files as the distro builds them."""
+    for entry in out('git', '-C', recipe, 'ls-files').splitlines():
+        if entry.startswith('.'):
+            continue
+        dest = tree / entry
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(recipe / entry, dest)
+    for key in sorted((tree / 'keys' / 'pgp').glob('*.asc')):
+        run('gpg', '--quiet', '--import', key, check=False)
+    SOURCES.mkdir(parents=True, exist_ok=True)
+    run('makepkg', '--nobuild', '--syncdeps', '--noconfirm', cwd=tree, env={'SRCDEST': str(SOURCES)})
+    # Sources that are git checkouts carry their own .git; keep their files
+    # in this tree's history instead of as an opaque nested repo.
+    for nested in sorted((tree / 'src').rglob('.git'), reverse=True):
+        if nested.is_dir():
+            shutil.rmtree(nested)
+    # Downloaded archives are symlinks into the shared source cache.
+    for link in (tree / 'src').iterdir():
+        if link.is_symlink() and str(os.readlink(link)).startswith(str(SOURCES)):
+            link.unlink()
+
+
+def snapshot(tree, message):
+    git(tree, 'add', '--all', '--force', '.')
+    git(tree, '-c', 'user.name=den', '-c', 'user.email=den@localhost', 'commit', '--quiet',
+        '--allow-empty', '--no-verify', '-m', message)
+
+
+def cmd_get(args):
+    base = pkgbase(args.pkg)
+    repo, version = distro_version(args.pkg)
+    origin = origin_of(repo)
+    if origin == 'denden':
+        print(f'{args.pkg} is Den Den\'s own: its recipe is /src/denden/packages/{base}')
+        return
+    tree = SRC / base
+    if tree.exists():
+        raise Fail(f'{tree} already exists')
+    version = installed_version(args.pkg) or version
+    say(f'{base} {version} from [{repo}] ({origin} recipe)')
+    recipe = recipe_for(origin, base, version)
+    tree.mkdir(parents=True)
+    try:
+        git(tree, 'init', '--quiet', '--initial-branch=upstream')
+        fill(tree, recipe)
+        recipe_version = out('bash', '-c', 'source PKGBUILD && echo "${epoch:+$epoch:}$pkgver-$pkgrel"', cwd=tree)
+        snapshot(tree, f'{base} {recipe_version}, as packaged by {origin}')
+        git(tree, 'branch', 'main')
+        git(tree, 'checkout', '--quiet', 'main')
+    except BaseException:
+        shutil.rmtree(tree, ignore_errors=True)
+        raise
+    save_meta(tree, {'pkgbase': base, 'origin': origin, 'repo': repo,
+                     'upstream_version': recipe_version, 'builds': 0})
+    print(f'{tree}: edit, commit, then `den src build {args.pkg}`')
+
+
+def cmd_build(args):
+    base, tree, meta = tree_of(args.pkg)
+    dirty = git(tree, 'status', '--porcelain', capture=True)
+    if dirty:
+        say('building uncommitted changes too; commit them to keep them across rebases')
+    work = BUILDS / f'src-{base}'
+    shutil.rmtree(work, ignore_errors=True)
+    work.parent.mkdir(parents=True, exist_ok=True)
+    # Reflinked copy: cheap on Btrfs, and the tree stays free of build output.
+    run('cp', '-a', '--reflink=auto', tree, work)
+    shutil.rmtree(work / '.git')
+    meta['builds'] += 1
+    pkgbuild = work / 'PKGBUILD'
+    text = pkgbuild.read_text()
+    # Number the build after the distro's own, so every build is distinct and
+    # newer than the package it replaces. pkgrel allows one dot, and CachyOS
+    # rebuilds Arch packages as 1.1, 1.2…: 1.1 → 1.1001, 1.1002…; 1 → 1.0001.
+    rel = re.search(r'^pkgrel=([\w.]+)', text, re.M)[1]
+    try:
+        _, distro = distro_version(args.pkg)
+        recipe_ver = meta['upstream_version'].rsplit('-', 1)[0]
+        if distro.rsplit('-', 1)[0] == recipe_ver:
+            rel = distro.rsplit('-', 1)[1]
+    except Fail:
+        pass
+    major, _, minor = rel.partition('.')
+    text = re.sub(r'^pkgrel=[\w.]+', f'pkgrel={major}.{minor or 0}{meta["builds"]:03d}', text, count=1, flags=re.M)
+    pkgbuild.write_text(text)
+    pkgdest = BUILDS / 'local'
+    pkgdest.mkdir(parents=True, exist_ok=True)
+    env = {'PKGDEST': str(pkgdest), 'SRCDEST': str(SOURCES)}
+    # --noextract: build the tree's src/ as it is, with its changes.
+    run('systemd-run', '--user', '--scope', '--quiet', '-p', 'MemoryMax=8G', '-p', 'CPUQuota=400%',
+        'nice', '-n', '10', 'makepkg', '--noextract', '--force', '--syncdeps', '--noconfirm', cwd=work, env=env)
+    listed = run('makepkg', '--packagelist', cwd=work, env=env, capture=True).splitlines()
+    # The list names a -debug package even when there was nothing to put in it.
+    archives = [p for p in listed if Path(p).is_file()]
+    if not archives:
+        raise Fail('the build produced no packages')
+    save_meta(tree, meta | {'built': git(tree, 'rev-parse', 'HEAD', capture=True)})
+    run('sudo', 'denden-publish', '--local', *archives)
+    run('sudo', 'pacman', '-Sy')
+    names = [out('pacman', '-Qp', a).split()[0] for a in archives]
+    wanted = [f'{LOCAL}/{n}' for n in names if installed_version(n) is not None and not n.endswith('-debug')]
+    if wanted:
+        run('sudo', 'pacman', '-S', '--noconfirm', *wanted)
+    shutil.rmtree(work, ignore_errors=True)
+    print(f'{base}: built and installed from {tree}')
+
+
+def cmd_diff(args):
+    _, tree, _ = tree_of(args.pkg)
+    extra = ['--stat'] if args.stat else []
+    run('git', '-C', tree, '--no-pager', 'diff', *extra, 'upstream', '--', '.')
+
+
+def cmd_rebase(args):
+    base, tree, meta = tree_of(args.pkg)
+    if git(tree, 'status', '--porcelain', capture=True):
+        raise Fail(f'{tree} has uncommitted changes; commit them first')
+    repo, version = distro_version(args.pkg)
+    if not newer(version, meta['upstream_version'], meta['origin']) and not args.force:
+        print(f'{base}: already on the distro\'s version ({meta["upstream_version"]})')
+        return
+    say(f'{base}: {meta["upstream_version"]} → {version}')
+    recipe = recipe_for(meta['origin'], base, version)
+    work = BUILDS / f'rebase-{base}'
+    shutil.rmtree(work, ignore_errors=True)
+    git(tree, 'worktree', 'prune')
+    git(tree, 'worktree', 'add', '--quiet', work, 'upstream')
+    try:
+        for entry in work.iterdir():
+            if entry.name != '.git':
+                shutil.rmtree(entry) if entry.is_dir() and not entry.is_symlink() else entry.unlink()
+        fill(work, recipe)
+        new = out('bash', '-c', 'source PKGBUILD && echo "${epoch:+$epoch:}$pkgver-$pkgrel"', cwd=work)
+        snapshot(work, f'{base} {new}, as packaged by {meta["origin"]}')
+    finally:
+        git(tree, 'worktree', 'remove', '--force', work, check=False)
+    save_meta(tree, meta | {'upstream_version': new, 'repo': repo})
+    # Rebasing rewrites commits, which needs a committer even where the user
+    # hasn't set up git.
+    who = {} if git(tree, 'config', 'user.email', capture=True, check=False) else {
+        'GIT_COMMITTER_NAME': 'den', 'GIT_COMMITTER_EMAIL': 'den@localhost'}
+    if run('git', '-C', tree, 'rebase', '--quiet', 'upstream', 'main', env=who, check=False) != 0:
+        conflicts = git(tree, 'diff', '--name-only', '--diff-filter=U', capture=True, check=False)
+        if not conflicts:
+            git(tree, 'rebase', '--abort', check=False)
+            raise Fail(f'rebasing {tree} onto {new} failed; your branch is unchanged')
+        print(f'{base}: your changes conflict with {new} in:\n{conflicts}\n'
+              f'Resolve them in {tree}, then `git rebase --continue` and `den src build {args.pkg}`.')
+        sys.exit(2)
+    print(f'{base}: your changes are on {new}; `den src build {args.pkg}` to install')
+
+
+def cmd_drop(args):
+    base, tree, meta = tree_of(args.pkg)
+    names = [line.split()[1] for line in
+             out('pacman', '-Sl', LOCAL).splitlines() if line.split()[1] in pkgnames(base)]
+    if names:
+        run('sudo', 'denden-publish', '--local', '--remove', *names)
+        run('sudo', 'pacman', '-Sy')
+        back = []
+        for n in names:
+            if installed_version(n) is not None:
+                repo, _ = distro_version(n)
+                back.append(f'{repo}/{n}')
+        if back:
+            run('sudo', 'pacman', '-S', '--noconfirm', *back)
+    meta.pop('built', None)
+    save_meta(tree, meta)
+    print(f'{base}: back on the distro\'s package. The tree and your commits stay in {tree}.')
+
+
+def pkgnames(base):
+    """Package names built from `base`, per the sync databases."""
+    lines = subprocess.run(['expac', '-S', '%e %n'], text=True, capture_output=True).stdout.splitlines()
+    return {n for b, n in (line.split() for line in lines if line.strip()) if b == base}
+
+
+def trees():
+    for meta in sorted(SRC.glob('*/.git/den.json')):
+        yield meta.parent.parent, json.loads(meta.read_text())
+
+
+def status():
+    rows = []
+    for tree, meta in trees():
+        base = meta['pkgbase']
+        mine = int(git(tree, 'rev-list', '--count', 'upstream..main', capture=True) or 0)
+        names = sorted(pkgnames(base)) or [base]
+        try:
+            repo, version = distro_version(names[0] if base not in names else base)
+        except Fail:
+            repo, version = meta['repo'], meta['upstream_version']
+        behind = newer(version, meta['upstream_version'], meta['origin'])
+        rows.append({'pkgbase': base, 'tree': str(tree), 'commits': mine,
+                     'upstream': meta['upstream_version'], 'distro': version,
+                     'installed_from_tree': 'built' in meta, 'rebase_needed': behind})
+    return rows
+
+
+def cmd_list(args):
+    rows = status()
+    if args.json:
+        print(json.dumps(rows, indent=2))
+        return
+    for r in rows:
+        state = 'needs rebase' if r['rebase_needed'] else 'current'
+        use = 'installed' if r['installed_from_tree'] else 'not installed'
+        print(f"{r['pkgbase']:24} {r['upstream']:16} {r['commits']} commit(s)  {use:13}  {state}")
+
+
+def main():
+    parser = argparse.ArgumentParser(prog='den', description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    top = parser.add_subparsers(dest='area', required=True)
+    src = top.add_parser('src', help='change any program from its source').add_subparsers(dest='cmd', required=True)
+    for name, fn in (('get', cmd_get), ('build', cmd_build), ('diff', cmd_diff),
+                     ('rebase', cmd_rebase), ('drop', cmd_drop)):
+        p = src.add_parser(name)
+        p.add_argument('pkg')
+        p.set_defaults(fn=fn)
+    src.choices['diff'].add_argument('--stat', action='store_true')
+    src.choices['rebase'].add_argument('--force', action='store_true',
+                                       help='take a fresh upstream snapshot even at the same version')
+    p = src.add_parser('list')
+    p.add_argument('--json', action='store_true')
+    p.set_defaults(fn=cmd_list)
+    args = parser.parse_args()
+    if os.geteuid() == 0:
+        raise SystemExit('den: run as your normal user; it uses sudo where it must')
+    try:
+        args.fn(args)
+    except Fail as exc:
+        raise SystemExit(f'den: {exc}')
+
+
+if __name__ == '__main__':
+    main()
