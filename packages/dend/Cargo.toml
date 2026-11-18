@@ -1,0 +1,20 @@
+[package]
+name = "dend"
+version = "0.1.0"
+edition = "2024"
+description = "Den Den's machine API: a Varlink service agents query"
+license = "MIT"
+publish = false
+
+# makepkg needs a package's sources side by side, so the crate is flat.
+[[bin]]
+name = "dend"
+path = "main.rs"
+
+[dependencies]
+libc = "0.2"
+serde_json = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1

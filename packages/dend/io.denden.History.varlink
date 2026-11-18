@@ -1,0 +1,20 @@
+# What happened on the machine, from the records it already keeps: pacman's
+# log, snapper and the journal. Read-only.
+interface io.denden.History
+
+# time is in seconds since the epoch. A package transaction's details list
+# each change, and the root snapshots taken before and after it, which the
+# recovery menu can start.
+type Event (
+  time: int,
+  source: (packages, snapshot, boot),
+  summary: string,
+  details: []string
+)
+
+# Events, newest first. text matches the summary or details, ignoring case;
+# since is a duration back from now (30m, 12h, 3d, 2w) or a date
+# (YYYY-MM-DD, local time); limit defaults to 50.
+method Query(text: ?string, since: ?string, limit: ?int) -> (
+  events: []Event
+)

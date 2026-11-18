@@ -1,0 +1,25 @@
+# systemd units, of the system and of the caller's user session. Read-only.
+interface io.denden.Service
+
+# since is when the unit last changed state, in seconds since the epoch.
+type Unit (
+  name: string,
+  scope: (system, user),
+  description: string,
+  load: string,
+  active: string,
+  sub: string,
+  enabled: string,
+  result: string,
+  since: ?int,
+  main_pid: ?int
+)
+
+# Units by name, looked up in the system manager and then the caller's user
+# manager (user picks one: true for the user's only, false for the system's
+# only); names found in neither come back in missing. With failed, or with
+# no names, every failed unit in both.
+method Status(names: ?[]string, user: ?bool, failed: ?bool) -> (
+  units: []Unit,
+  missing: []string
+)

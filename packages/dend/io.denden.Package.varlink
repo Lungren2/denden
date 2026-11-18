@@ -1,0 +1,33 @@
+# Packages, from pacman's databases as last synced (never refreshed here).
+# Read-only.
+interface io.denden.Package
+
+# version is the installed version, null when it isn't installed. repository
+# is the first repository that has the package (where upgrades come from) and
+# available its version there; origin is the repository holding exactly the
+# installed version, null for a version no repository has. install_date is in
+# seconds since the epoch, installed_size in bytes. source_tree is the den src
+# tree (/src/<base>) when there is one.
+type Package (
+  name: string,
+  base: string,
+  description: string,
+  url: string,
+  version: ?string,
+  available: ?string,
+  repository: ?string,
+  origin: ?string,
+  reason: ?(explicit, dependency),
+  installed_size: ?int,
+  install_date: ?int,
+  source_tree: ?string
+)
+
+# Packages by exact name, installed or not (names neither installed nor in
+# any repository come back in missing); or installed packages whose name or
+# description contains search, ignoring case; or, with neither, every
+# explicitly installed package.
+method Query(names: ?[]string, search: ?string) -> (
+  packages: []Package,
+  missing: []string
+)

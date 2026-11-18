@@ -1,0 +1,66 @@
+# The machine Den Den runs on: hardware, system and health. Read-only.
+interface io.denden.Machine
+
+type Firmware (
+  vendor: string,
+  version: string,
+  date: string
+)
+
+# A whole disk. removable is true for USB sticks; system, for the disk that
+# holds the root filesystem. size is in bytes.
+type Disk (
+  name: string,
+  model: string,
+  size: int,
+  transport: string,
+  removable: bool,
+  system: bool
+)
+
+# A mounted filesystem, sizes in bytes. Btrfs subvolumes share one
+# filesystem's space.
+type Filesystem (
+  mount: string,
+  source: string,
+  fstype: string,
+  size: int,
+  available: int
+)
+
+# One health check. detail says what was found, in words a person can read.
+type Check (
+  id: string,
+  title: string,
+  status: (ok, warn, fail),
+  detail: string
+)
+
+# Hardware, kernel, firmware and storage. memory is in bytes, uptime in
+# seconds; root_subvolume is the Btrfs subvolume mounted at /, which names a
+# snapshot when the machine was started from one.
+method Inspect() -> (
+  hostname: string,
+  os: string,
+  denden: string,
+  kernel: string,
+  root_subvolume: string,
+  uptime: int,
+  cpu: string,
+  threads: int,
+  memory: int,
+  memory_available: int,
+  gpus: []string,
+  board: string,
+  firmware: Firmware,
+  disks: []Disk,
+  filesystems: []Filesystem
+)
+
+# Health: disk space, SSD health, failed units, T3 Code, Tailscale, backups,
+# snapshots, package updates. Checks of a user's session are for the caller.
+# status is the worst of the checks.
+method Doctor() -> (
+  status: (ok, warn, fail),
+  checks: []Check
+)

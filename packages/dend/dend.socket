@@ -1,0 +1,11 @@
+[Unit]
+Description=Den Den machine API socket
+
+[Socket]
+ListenStream=/run/den/io.denden
+# Read-only for now; any local user may ask. The broker (milestone 6) checks
+# each caller before anything changes.
+SocketMode=0666
+
+[Install]
+WantedBy=sockets.target

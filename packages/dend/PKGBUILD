@@ -1,0 +1,62 @@
+# Maintainer: Ethan <ethanogle012@outlook.com>
+#
+# dend, Den Den's machine API: a Varlink service on /run/den/io.denden that
+# agents and people query for the machine's state (hardware, packages,
+# services, history, health). `den machine|package|service|history|doctor`
+# and the den MCP server are its clients; `varlinkctl introspect
+# /run/den/io.denden` shows the interfaces. Read-only until the broker.
+
+pkgname=dend
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Den Den's machine API: hardware, packages, services, history and health for agents"
+arch=('x86_64')
+url='https://github.com/Lungren2/denden'
+license=('MIT')
+depends=('glibc' 'gcc-libs' 'systemd' 'pacman' 'expac' 'util-linux' 'pciutils'
+         'smartmontools' 'snapper')
+makedepends=('rust')
+optdepends=('tailscale: the doctor reports whether the machine can be reached')
+options=('!lto')
+source=('Cargo.toml' 'Cargo.lock' 'main.rs' 'util.rs' 'machine.rs' 'doctor.rs'
+        'package.rs' 'service.rs' 'history.rs'
+        'org.varlink.service.varlink' 'io.denden.Machine.varlink'
+        'io.denden.Package.varlink' 'io.denden.Service.varlink'
+        'io.denden.History.varlink' 'dend.service' 'dend.socket')
+sha256sums=('235d6cb8aea7ebc4d57b42d35e0cc9b01e86cefe926d263de41967a2c15c20fc'
+            '470647018afa58962ce5013219ea3ac7246c9175fc0d791329f0fb20c60aa14b'
+            'e42ff4b25780ecd87f114507d072bcf583688a194e8964498d9576891ae7ce6b'
+            '373e69e7382dbab408f76cbc560fef045f122e0cc29e3d15d1a2792d2fabed2d'
+            '83d8d1dce830ae172b91212b0fb5922d557b2a04225a119589aa477bde0e02dd'
+            'd6ee3803b79d7a1e637f568048b0cb65ccf815fb197488fe4192b1a85c520295'
+            'ab752680728e724c6409138617effafc91ec23461e1ea05f3a134bb75c90774d'
+            'a05e9e0faf7cda0b307d0ddae3ffa54fa2459574959720601e84c707c4d1accb'
+            'ac1a065f8defa0c9da7667798bc4a4ec8af2a64e005dcc7f68c6aafc54bbc13b'
+            'c3df65d92f4d9ffb7406569f4a6ed853fa7f747e0d49f216d23dedbcb4766712'
+            '811817d1be6b5fa56556590a3818fd78494f457c15f51461e4d054fa18299d37'
+            'c6df3ab658a74beb53da8af0180abe2a83ddb58f8860f0050437be51e33c430f'
+            'ac3e7cfc538a32046951b4e383e55494f37022be8a922c5b65a8d98536aea115'
+            '2830b81da2976abe37d68311c01a8a90f8a9986fbc3fdc74a820ebb29be07594'
+            '9e0fea413bb8445868c98f5da012ff57bf0682b2200c53814940088341b6f3e9'
+            'bfa76a74f3406cab044e10befee70f5b3bb01fc756d762b07d2793e6143a53f2')
+
+prepare() {
+  # makepkg links the sources into $srcdir; cargo builds them from there.
+  export CARGO_HOME="${srcdir}/cargo"
+  cargo fetch --locked --target "$(rustc --print host-tuple)"
+}
+
+build() {
+  export CARGO_HOME="${srcdir}/cargo"
+  # Crate paths in panic messages, without the build directory.
+  export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=${srcdir}=."
+  cargo build --frozen --release --target-dir "${srcdir}/target"
+}
+
+package() {
+  install -Dm755 "${srcdir}/target/release/dend" "${pkgdir}/usr/lib/dend"
+  install -Dm644 -t "${pkgdir}/usr/lib/systemd/system" dend.service dend.socket
+  install -d "${pkgdir}/usr/lib/systemd/system/sockets.target.wants"
+  ln -s ../dend.socket "${pkgdir}/usr/lib/systemd/system/sockets.target.wants/dend.socket"
+  install -Dm644 -t "${pkgdir}/usr/share/varlink" io.denden.*.varlink
+}
