@@ -6,7 +6,7 @@
 # desktop app is packaged separately in the AUR as t3code-bin.
 
 pkgname=t3code-cli-bin
-pkgver=0.1.9
+pkgver=0.1.10
 pkgrel=1
 pkgdesc='T3 Code control plane for coding agents (headless server and CLI)'
 arch=('x86_64')
@@ -28,10 +28,8 @@ source=(
   "https://github.com/pingdotgg/t3code/releases/download/v${pkgver}/${_dist}.tar.gz"
   "${pkgname}-${pkgver}-LICENSE::https://raw.githubusercontent.com/pingdotgg/t3code/v${pkgver}/LICENSE"
 )
-sha256sums=(
-  '0141025335da334759cecd8db3483e09772f3600ca03674698524e7d94291362'
-  '935d8f2af0c703f9c39517ee57cc4930b19d02d533be930b63f0e82f93614b43'
-)
+sha256sums=('9bea9d36a217299a0af880e8c347b536ed6a9a2f5bf328a695d174d63628c5e8'
+            '935d8f2af0c703f9c39517ee57cc4930b19d02d533be930b63f0e82f93614b43')
 
 package() {
   install -d "${pkgdir}/opt/${pkgname}"
