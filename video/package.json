@@ -3,8 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "mark": "python3 ../packages/denden-boot/mushi.py '#eceef2' > public/mushi.svg && python3 ../packages/denden-boot/mushi.py '#eceef2' --small > public/mushi-small.svg",
+    "prestudio": "npm run mark",
     "studio": "remotion studio",
+    "prerender": "npm run mark",
     "render": "remotion render Launch out/denden-launch.mp4",
+    "prestill": "npm run mark",
     "still": "remotion still Launch out/still.png"
   },
   "dependencies": {

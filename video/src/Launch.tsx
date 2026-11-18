@@ -45,14 +45,14 @@ const Backdrop: React.FC = () => {
 const Intro: React.FC = () => {
   const f = useCurrentFrame();
   const pop = useSpring(4, 11);
-  const cord = interpolate(f, [18, 52], [0, 1], { ...clamp, easing: ease });
-  const blink = interpolate(f, [62, 66, 70], [0, 1, 0], clamp);
+  // den den, den den: two short rings once it has landed
+  const ring = interpolate(f, [26, 30, 40, 44, 50, 54, 64, 68], [0, 1, 1, 0, 0, 1, 1, 0], clamp);
   const title = useSpring(34, 16);
   return (
     <Scene len={110}>
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 24 }}>
         <div style={{ transform: `scale(${pop}) translateY(${(1 - pop) * 40}px)` }}>
-          <Mushi size={300} cord={cord} blink={blink} />
+          <Mushi size={300} ring={ring} frame={f} />
         </div>
         <div
           style={{
@@ -469,7 +469,7 @@ const Doctor: React.FC = () => (
 const Outro: React.FC = () => {
   const f = useCurrentFrame();
   const pop = useSpring(2, 12);
-  const blink = interpolate(f, [70, 74, 78], [0, 1, 0], clamp);
+  const ring = interpolate(f, [84, 88, 100, 104], [0, 0.8, 0.8, 0], clamp);
   const sub = interpolate(f, [30, 46], [0, 1], { ...clamp, easing: ease });
   const tags = ["Arch", "CachyOS", "niri", "T3 Code", "Claude Code", "Codex"];
   return (
@@ -477,7 +477,7 @@ const Outro: React.FC = () => {
       <Backdrop />
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 30 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 40, transform: `scale(${0.9 + pop * 0.1})`, opacity: pop }}>
-          <Mushi size={220} blink={blink} />
+          <Mushi size={220} ring={ring} frame={f} />
           <div style={{ fontFamily: font, fontWeight: 700, fontSize: 150, letterSpacing: -6, color: c.text }}>Den Den</div>
         </div>
         <div style={{ display: "flex", gap: 14, opacity: sub, transform: `translateY(${(1 - sub) * 16}px)` }}>

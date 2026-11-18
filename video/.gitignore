@@ -1,2 +1,4 @@
 node_modules/
 out/
+# drawn from packages/denden-boot/mushi.py by `npm run mark`
+public/mushi*.svg
