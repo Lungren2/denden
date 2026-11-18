@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Set up Den Den
+Comment=Connect GitHub, Tailscale and backups
+Exec=denden-setup
+Icon=/usr/share/denden/boot/mushi-small.svg
+Terminal=false
+Categories=Settings;System;
+StartupWMClass=denden-setup

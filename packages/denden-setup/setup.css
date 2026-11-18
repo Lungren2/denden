@@ -1,0 +1,124 @@
+/* T3 Code's dialog, step wizard, buttons and switches, in its dark tokens
+   (apps/web/src/index.css and components/ui in T3 Code's source). The window
+   itself is the dialog; niri draws its border, corners and shadow. */
+:root {
+  color-scheme: dark;
+  --background: #000;
+  --foreground: #f5f5f5;
+  --card: #111;
+  --muted-foreground: #a3a3a3;
+  --border: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 11%);
+  --accent: rgb(255 255 255 / 4%);
+  --primary: #346bf1;
+  --primary-foreground: #fff;
+  --primary-soft: #8fb0ff;
+  --success: #00d492;
+  --error: #ff6467;
+  --control-radius: 8px;
+  --font-sans: "Inter Variable", Inter, system-ui, sans-serif;
+  --font-mono: "Cascadia Code", ui-monospace, monospace;
+  --surface-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--background) var(--surface-grain) repeat;
+  background-size: 256px 256px;
+  color: var(--foreground);
+  font: 14px/1.43 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+#dialog { display: flex; flex-direction: column; -webkit-app-region: drag; }
+button, .steps, .panel, input { -webkit-app-region: no-drag; }
+
+/* DialogHeader: p-6, title text-xl semibold, description text-sm muted */
+header { padding: 24px 24px 12px; }
+h1 { margin: 0 0 6px; font-size: 20px; font-weight: 600; line-height: 1.375; letter-spacing: -0.005em; }
+header p { margin: 0; color: var(--muted-foreground); }
+
+/* The wizard's step strip */
+.steps {
+  margin: 4px 24px 0;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
+  padding: 4px; border-radius: 12px;
+  background: rgb(255 255 255 / 4%); box-shadow: 0 0 0 1px rgb(255 255 255 / 5%);
+}
+.step {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--muted-foreground); font: 500 14px var(--font-sans); text-align: left;
+}
+.step:hover:not([aria-current]) { background: var(--card); }
+.step[aria-current] { background: var(--card); color: var(--foreground); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 5%); }
+.num {
+  display: grid; place-items: center; width: 20px; height: 20px; flex: none; border-radius: 10px;
+  font-size: 12px; font-weight: 500;
+  background: rgb(255 255 255 / 5%); box-shadow: 0 0 0 1px rgb(255 255 255 / 10%);
+}
+.step[aria-current] .num { background: rgb(52 107 241 / 10%); color: var(--primary-soft); box-shadow: 0 0 0 1px rgb(52 107 241 / 30%); }
+.step.done .num { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 0 0 1px var(--primary); }
+.num svg { width: 12px; height: 12px; }
+
+/* The step's panel */
+.panel {
+  margin: 16px 24px 20px; padding: 20px; border-radius: 12px; min-height: 172px;
+  background: rgb(255 255 255 / 2%); box-shadow: 0 0 0 1px rgb(255 255 255 / 5%);
+  display: flex; gap: 18px; align-items: center;
+}
+.panel .body { flex: 1; min-width: 0; }
+.panel h2 { margin: 0 0 4px; font-size: 14px; font-weight: 500; }
+.panel p { margin: 0; font-size: 13px; color: var(--muted-foreground); line-height: 1.5; }
+.panel p + p { margin-top: 8px; }
+.icon {
+  display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 12px;
+  background: rgb(255 255 255 / 5%); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 6%); color: var(--foreground);
+}
+.icon.ok { background: rgb(0 212 146 / 12%); color: var(--success); box-shadow: inset 0 0 0 1px rgb(0 212 146 / 25%); }
+svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.qr { width: 112px; height: 112px; flex: none; padding: 8px; border-radius: 8px; background: #fff; }
+.qr svg { display: block; width: 100%; height: 100%; }
+.wait { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--muted-foreground); }
+.spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--input); border-top-color: var(--foreground); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error { color: var(--error) !important; }
+
+.code {
+  display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 6px 6px 12px;
+  border-radius: var(--control-radius); background: var(--card); box-shadow: inset 0 0 0 1px var(--border);
+  font: 500 15px var(--font-mono); letter-spacing: .04em; user-select: text;
+}
+.code span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.code.key { font-size: 12px; letter-spacing: 0; }
+.check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--foreground); }
+.check input { appearance: none; width: 16px; height: 16px; margin: 0; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--input); display: grid; place-items: center; }
+.check input:checked { background: var(--primary); box-shadow: none; }
+.check input:checked::after { content: ""; width: 8px; height: 4px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
+
+/* DialogFooter: border-t, muted, buttons at the end */
+footer {
+  display: flex; gap: 8px; padding: 16px 24px; border-top: 1px solid var(--border);
+  background: rgb(255 255 255 / 2%);
+}
+footer .spacer { flex: 1; }
+
+/* Button: h-8, px-3, rounded 8px, text-sm medium; press shrinks to 97% */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 11px;
+  border: 1px solid transparent; border-radius: var(--control-radius); white-space: nowrap;
+  font: 500 14px var(--font-sans); color: var(--foreground); background: transparent;
+  transition: scale .1s, background-color .15s, box-shadow .15s;
+}
+.btn:active:not(:disabled) { scale: .97; }
+.btn:disabled { opacity: .64; }
+.btn:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--primary); }
+.btn.primary { background: var(--primary); color: var(--primary-foreground); box-shadow: inset 0 1px rgb(255 255 255 / 16%); }
+.btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 90%, #000); }
+.btn.outline { border-color: var(--border); background: rgb(255 255 255 / 3%); }
+.btn.outline:hover:not(:disabled) { background: rgb(255 255 255 / 6%); }
+.btn.ghost { color: var(--muted-foreground); }
+.btn.ghost:hover:not(:disabled) { background: var(--accent); color: var(--foreground); }
+.btn.small { height: 28px; padding: 0 9px; font-size: 13px; }

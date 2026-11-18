@@ -1,0 +1,5 @@
+#!/bin/sh
+# Set up Den Den: GitHub, Tailscale and backups, in one window styled like
+# T3 Code's dialogs. `--first-run` (the login autostart) opens it only until
+# it has been finished or closed once.
+exec electron44 /usr/lib/denden-setup "$@"

@@ -1,0 +1,52 @@
+# Maintainer: Ethan <ethanogle012@outlook.com>
+#
+# Set up Den Den: one window that signs in to GitHub (bringing repositories
+# into ~/Projects), puts the machine on Tailscale, and sets up backups on the
+# Den Den USB stick. It opens by itself at the first login and from the
+# launcher after that.
+#
+# It is a small web page on the Electron runtime T3 Code already uses, so it
+# is drawn with T3 Code's own dialog styles rather than an imitation of them.
+
+pkgname=denden-setup
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Den Den first-run setup: GitHub, Tailscale and backups'
+arch=('any')
+url='https://github.com/Lungren2/denden'
+license=('MIT')
+depends=(
+  'denden-base'                     # denden-repos, denden-backup, tailscale
+  'electron44'                      # the runtime t3code-desktop runs on
+  'github-cli' 'tailscale' 'util-linux'
+  'qrencode'                        # the QR code for signing in from a phone
+  'inter-font' 'ttf-cascadia-code'
+)
+source=(
+  'denden-setup'
+  'denden-setup.desktop'
+  'denden-setup-first-run.desktop'
+  'package.json'
+  'main.js'
+  'preload.js'
+  'index.html'
+  'setup.css'
+  'setup.js'
+)
+sha256sums=('4199c449d13eda22a5822dfc13a91310999e2a10103565e5595599e9393311e9'
+            'cdefcf38423f7e103fc65a2b0c0647a1885b541b92c282183bab6489f2b49d2a'
+            '71c0a97734e79484d1884a2bcde83b5f0ca1addb65d42950234abda0b6db40bf'
+            '1feb24155dda29404312b769274a1ebdd2a521a0b23974c4296765efe51365e8'
+            '35de8ceb3ac9e5f964874b6383d5c4c85b2b26a2e152b6282b4c23e270f6d9f4'
+            '0515313d41d7a64b055ea0b650c47c4433785f7dee110479a7a94203db7e7553'
+            '82be9afbd12ea7dd5e75b570860a16bc27e73c7158af6c339591c48ef02ca1f7'
+            '40e713db72f3b1b021b815e2bf77fec491cc9ffb7ee1f062e4c7e0be4b80a84e'
+            'c7e98d166df18e21d1b8e4283b8c9226bf13ecebaf36d158c3fecc8130a8b4d1')
+
+package() {
+  install -Dm755 denden-setup "${pkgdir}/usr/bin/denden-setup"
+  install -Dm644 -t "${pkgdir}/usr/lib/denden-setup" \
+    package.json main.js preload.js index.html setup.css setup.js
+  install -Dm644 denden-setup.desktop "${pkgdir}/usr/share/applications/denden-setup.desktop"
+  install -Dm644 denden-setup-first-run.desktop "${pkgdir}/etc/xdg/autostart/denden-setup.desktop"
+}

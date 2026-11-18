@@ -1,0 +1,8 @@
+{
+  "name": "denden-setup",
+  "productName": "Set up Den Den",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "desktopName": "denden-setup.desktop"
+}

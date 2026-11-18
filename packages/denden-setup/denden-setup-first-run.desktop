@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Set up Den Den
+Exec=denden-setup --first-run
+NoDisplay=true
+Terminal=false
