@@ -1,233 +1,86 @@
-# Den Den
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/mushi-dark.svg">
+    <img src="docs/assets/mushi-light.svg" width="140" alt="The Den Den snail">
+  </picture>
+</p>
 
-A personal Arch Linux–based distro built as an environment for AI agents to
-work in effectively. It uses CachyOS's kernel and packages on top of Arch, and
-is built with [archiso](https://gitlab.archlinux.org/archlinux/archiso).
+<h1 align="center">Den Den</h1>
 
-> Named after the den den mushi, the snail phones everyone in One Piece talks
-> through. The command-line interface is `den`.
+<p align="center">
+  <b>A computer you run by talking to it.</b><br>
+  An Arch Linux desktop built for coding agents to live in, with you watching.
+</p>
 
-## Layout
+<p align="center">
+  <img src="https://img.shields.io/badge/base-Arch%20%2B%20CachyOS-1793d1?logo=archlinux&logoColor=white" alt="Arch + CachyOS">
+  <img src="https://img.shields.io/badge/desktop-niri%20%2B%20Noctalia-8a63d2" alt="niri + Noctalia">
+  <img src="https://img.shields.io/badge/agents-T3%20Code%20·%20Claude%20Code%20·%20Codex-d97757" alt="Agents">
+  <img src="https://img.shields.io/badge/license-MIT%20%2F%20GPL--3.0-555" alt="MIT / GPL-3.0">
+</p>
 
-| Path | What it is |
+---
+
+In One Piece, everyone talks through a *den den mushi*, a snail that is also
+a phone. This is that idea for a PC: you log in, T3 Code is already open, and
+when you want something changed (a shortcut, the taskbar, the boot screen, a
+bug in some program) you ask for it and an agent makes the change.
+
+## Why it's different
+
+🐌 **The agent knows the machine.** Every agent gets a map of the whole
+system: what runs each part, which file changes it, and the rules. Ask
+"make the taskbar smaller" and it knows where to look.
+
+🛟 **Mistakes are cheap to undo.** Btrfs snapshots before and after every
+package change, hourly snapshots of your work, and encrypted backups to the
+USB stick you installed from. Any snapshot can be booted from the start menu.
+
+🔧 **Every program can be changed from source.** `den src get <pkg>` gives
+you the source of whatever is installed as a git repo. Edit it, `den src
+build`, and your version stays installed through updates.
+
+🩺 **The machine can answer questions about itself.** `den doctor` reports
+on disks, failed services, backups and updates, and agents can ask the same
+things over MCP instead of scraping shell output.
+
+✨ **No terminal on the normal path.** You get a boot picker with icons, a
+splash screen and a desktop styled after T3 Code, then a setup page that
+connects GitHub, Tailscale and backups. You never see a wall of text unless
+you go looking.
+
+## What's in the box
+
+| | |
 | --- | --- |
-| `archiso/` | The archiso profile. Started as a verbatim copy of upstream `configs/releng` (see below). |
-| `archiso/packages.x86_64` | Packages installed into the live image. |
-| `archiso/airootfs/` | Files overlaid onto the image's root filesystem. |
-| `archiso/profiledef.sh` | ISO name, boot modes, compression, file permissions. |
-| `archiso/pacman.conf` | Repos the image is built from: local `denden`, `cachyos`, then Arch. |
-| `packages/` | PKGBUILDs for this distro's own packages: T3 Code, the `denden-base` and `denden-desktop` meta packages, the startup screens (`denden-boot`), the installer. |
-| `scripts/setup-build-host.sh` | One-time setup of an Arch build host. |
-| `scripts/build.sh` | Builds `packages/` into a local repo, then the ISO into `out/`. |
-| `scripts/test-install.sh` | Installs the newest ISO onto a virtual disk in a VM, then boots it. |
-| `docs/agent-environment.md` | Design of the agent environment: the reason this distro exists. |
-| `docs/ROADMAP.md` | Milestones, in build order. |
+| **Base** | Arch + CachyOS repos, `linux-cachyos` (LTS as fallback), Btrfs + snapper |
+| **Desktop** | niri tiling, Noctalia shell, Ghostty + fish, Helium browser |
+| **Agents** | T3 Code desktop (built from source), Claude Code, Codex |
+| **Toolchains** | Node, Bun, Rust, Python (uv), .NET, Docker; `mise` for per-project versions |
+| **Network** | Tailscale only, with every other inbound connection refused |
+| **Repos** | All your GitHub repos cloned into `~/Projects` and kept up to date |
 
-## Upstream baseline
+## Try it
 
-The first commit (tagged `baseline`) is an unmodified import of `configs/releng` from archiso
-**v92** (`8e3ead17e1e5cfde503534d23be918b8787d3dd3`). Every later commit is a
-deliberate divergence, so `git diff baseline -- archiso/` always shows
-exactly how this distro differs from stock Arch.
+1. **Build** the ISO on any Arch machine: `sudo ./scripts/build.sh`
+2. **Flash** it: `scripts/flash.sh out/denden-*.iso /dev/sdX`
+3. **Boot** the stick (UEFI), get online, run `denden-install`. It can
+   install next to Windows.
 
-To see what changed upstream when bumping archiso:
+Then log in and ask T3 Code for whatever you want changed.
 
-```sh
-git fetch --depth 1 https://gitlab.archlinux.org/archlinux/archiso.git tag v92 tag v93
-git diff v92:configs/releng v93:configs/releng
-```
+Super+Space opens the launcher, Super+S quick settings, and Super+Shift+/
+lists every shortcut.
 
-## Building
+## Learn more
 
-mkarchiso only runs on Arch Linux, as root. Development happens in the Arch
-WSL distro (`wsl --install archlinux`), with the repo on the Linux filesystem —
-never a Windows drive, where the exec bits and symlinks the profile depends on
-are lost:
-
-```sh
-sudo pacman -Syu --needed git github-cli
-gh repo clone Lungren2/denden ~/denden
-cd ~/denden
-sudo ./scripts/setup-build-host.sh   # once: archiso, makepkg, CachyOS key + mirrorlist
-sudo ./scripts/build.sh
-```
-
-`build.sh` first builds every `packages/*/PKGBUILD` into a local pacman repo
-(`repo/x86_64/`, as your user), then builds the ISO from Arch, CachyOS and
-that local repo.
-
-Test the result without real hardware:
-
-```sh
-sudo pacman -S --needed qemu-desktop edk2-ovmf
-run_archiso -u -i out/*.iso          # boot the live image
-sudo pacman -S --needed qemu-base qemu-hw-display-virtio-vga \
-  qemu-hw-display-virtio-gpu edk2-ovmf socat \
-  limine gptfdisk dosfstools mtools
-./scripts/test-install.sh            # install to a virtual disk, then boot it
-./scripts/test-install.sh windows    # boot it and pick Windows at startup
-```
-
-`test-install.sh` runs `denden-install` unattended in a KVM VM against a blank
-virtual disk, with a second small disk that looks like a Windows disk to the
-startup picker. It boots the result and saves screenshots of the start (every
-2 s) and the desktop. A VM without a GPU can't show the Niri session (niri
-won't render in software), so check the session in the guest's journal; the
-script shuts the VM down cleanly for that.
-
-## Flashing
-
-From Linux (Den Den itself, or any Arch system), `scripts/flash.sh` writes the
-ISO byte for byte and verifies it by SHA-256. Find the stick by model and bus,
-not by name alone:
-
-```sh
-lsblk -o NAME,MODEL,TRAN,SIZE
-scripts/flash.sh out/denden-<date>-x86_64.iso /dev/sdX
-```
-
-It refuses anything that isn't a whole USB disk, or that has a mounted
-partition, and asks you to type a word first. A stick that holds backups
-(`denden-backup setup`) keeps them: only the image is replaced, and the
-DENDEN_DATA partition is put back into the new partition table (`--erase`
-wipes everything). It can also write to a disk image file, for testing.
-
-From Windows (WSL can't see USB drives directly), `scripts/flash.ps1` does the
-same, and `-Erase` wipes everything. Run it from an elevated PowerShell; the
-ISO is reachable at `\\wsl$\archlinux\home\<user>\denden\out\`:
-
-```powershell
-Get-Disk   # note the USB disk's Number
-pwsh -ExecutionPolicy Bypass -File .\scripts\flash.ps1 -IsoPath <iso> -DiskNumber <n>
-```
-
-Rufus (DD mode) or balenaEtcher work too, but they erase the backups.
-
-## Installing
-
-Boot the USB stick in UEFI mode (Den Den doesn't support BIOS boot), connect to
-the internet and run:
-
-```sh
-denden-install
-```
-
-It asks for a disk and whether to erase it or install into its largest free
-space, keeping the partitions already there (e.g. beside Windows). Then it asks
-for a hostname, user and time zone, and confirms before touching anything.
-It creates a 4 GiB boot partition and a Btrfs partition with the subvolumes
-`@`, `@home`, `@src`, `@snapshots`, `@log`, `@pkg` and `@docker`, installs
-`denden-desktop` plus drivers for the GPU it finds.
-
-The computer then starts with a picker showing Den Den and, if Windows is on
-any disk, Windows (it remembers the last choice; with Den Den alone it goes
-straight on), then a splash until the desktop is up. Root snapshots are taken
-around every pacman transaction; to boot one, or the fallback LTS kernel, hold
-a key as Den Den starts to show the recovery menu. If Windows goes on another disk later, run
-`sudo denden-boot-update` to add it to the picker.
-
-The desktop is Niri with a taskbar from [Noctalia](https://github.com/noctalia-dev/noctalia):
-the Den Den mark opens the launcher (also Super+Space), quick settings for
-Wi-Fi, Bluetooth and sound are on the right (Super+S), and Settings is
-Super+Comma. T3 Code opens maximized at login; Super+Shift+Slash lists every
-shortcut. The desktop follows T3 Code's design system (its colours, Inter,
-its glass and radii), so the system reads as part of the app.
-
-At the first login, **Set up Den Den** (also in the launcher) connects three
-things. Sign in to GitHub, and every repository you own or that your
-organisations own is cloned into `~/Projects` and kept up to date hourly
-(`denden-repos`). Connect Tailscale to reach the machine from your other
-devices (it also allows SSH over Tailscale), and sign in to T3 Connect in T3
-Code's settings. The firewall refuses every other inbound
-connection. Projects can pin their own tool versions in a `mise.toml`.
-
-Backups go to the Den Den USB stick: with it plugged in, the last step of
-**Set up Den Den** adds a backup partition after the Den Den image (the stick
-stays bootable) and shows the key the backups are encrypted with; keep that
-key in your password manager. After that, `/home` and `/src`
-are backed up whenever the stick is plugged in and daily while it is, and a
-notification asks for the stick when the last backup is three days old.
-Restore with `denden-backup restic restore latest --target <dir> --include <path>`.
-
-## Asking the machine
-
-`den doctor` checks the machine's health: disk space and SMART health,
-failed services, T3 Code, Tailscale, the last backup, snapshots and package
-updates. `den machine inspect`, `den package query`, `den service status`
-and `den history query` answer the rest (every one takes `--json`), and
-`den mcp` serves the same operations to agents as MCP tools; Codex gets it
-from `/etc/codex/config.toml` and each user's Claude Code at first login.
-
-They're clients of `dend`, Den Den's machine API: a read-only Varlink service
-on `/run/den/io.denden`, started on demand by `dend.socket` and running as
-root in a read-only sandbox so it can read SMART data, snapper and each
-user's services. Its interfaces are `io.denden.Machine`, `.Package`,
-`.Service` and `.History` (`varlinkctl introspect /run/den/io.denden`).
-History comes from records the machine already keeps (pacman's log with the
-snapshots around each transaction, snapper, the journal's boots) until
-milestone 7's event log.
-
-## Changing any program
-
-Any package on the system can be changed from its source. `den src get
-<package>` puts the distro's recipe and the source of the installed version
-in `/src/<pkgbase>` as a git repo; commit your changes there and `den src
-build <package>` installs them from the `[denden-local]` repo, which shadows
-every other repo. `den src diff` shows your changes, `den src rebase` carries
-them onto a newer distro version (the daily update check says when one is
-out), and `den src drop` goes back to the distro's package.
-
-## Package updates
-
-`denden-update check` reports differences between installed Den Den packages,
-the local repository, and recipes in `/src/denden`. It also checks the latest
-stable T3 Code and Noctalia releases, and the runtime versions embedded by
-T3 builds. `--json` returns the same report for agents. The user timer
-`denden-updates.timer` checks daily and sends a notification when the report
-changes; a failed lookup is reported, never treated as “up to date”.
-
-New stable T3 Code and Noctalia releases don't wait for a person:
-`denden-recipes.timer` runs `denden-update bump` daily. It moves each recipe
-to the new release on its own branch (`recipe-update/<package>-<version>`) in
-a separate worktree, with fresh checksums, and builds it if the package is
-installed. A build that works is fast-forwarded into `main` and published, so
-it installs with the next full upgrade; one that fails, usually a patch that
-no longer applies, stays on its branch with the build log in
-`~/.local/state/denden/recipe-updates/` and a notification asking for an
-agent to finish it: commit the fix on that branch, and the next run (or
-`denden-update bump <package>`) builds it again and lands it. A branch that
-builds while `/src/denden` has uncommitted changes waits for the next run;
-if `main` has moved, the update is rebased onto it first.
-
-After reviewing and updating recipes, run `denden-update apply` as your user.
-It first performs a full system upgrade, then builds installed Den Den packages
-under a memory/CPU limit, publishes completed packages into
-`/var/lib/denden/repo`, and performs another full upgrade to install them.
-Build dependencies and publication use sudo; makepkg runs as the user. Failed
-builds stop before publication. Cached packages are reused; bump `pkgrel` when
-rebuilding the same upstream version. Builds and sources stay outside the
-checkout; package archives live in its ignored `repo/` directory.
-
-To build a subset: `scripts/build-packages.sh denden-base denden-desktop`.
-`sudo denden-publish PACKAGE…` publishes completed archives. Existing archives
-are retained; a different archive with the same filename is refused, and an
-older version cannot replace a newer repository entry. Publication places
-archives before updating the database. The installed `[denden]` repository
-already has priority over CachyOS and Arch, including for our patched Noctalia.
-
-Checks do not refresh pacman's live sync databases or install anything.
-Upstream releases still need a recipe bump, checksum refresh, patch review and
-successful build. This is a local repository, not a signed remote distribution
-service. No new upstream versions or recipe code are installed unattended.
-The GitHub repository timer can fast-forward a clean checkout; the updater
-never pulls or rewrites your working tree.
+- [**Building, testing & flashing**](docs/building.md): VM tests, the installer, WSL
+- [**Updates, `den` & local source**](docs/updates.md): how packages stay current, the machine API, backups
+- [**Design**](docs/agent-environment.md): why it's built this way
+- [**Roadmap**](docs/ROADMAP.md): what's done and what's next
+- [**The agent contract**](packages/denden-base/AGENTS.md): `AGENTS.md`, the map every agent reads
 
 ## License
 
-Original work in this repo is licensed under the [MIT License](LICENSE).
-
-Everything under `archiso/` is derived from
-[archiso](https://gitlab.archlinux.org/archlinux/archiso)'s `releng` profile and
-remains under **GPL-3.0-or-later** (see
-[`LICENSES/GPL-3.0-or-later.txt`](LICENSES/GPL-3.0-or-later.txt)). Changes made
-to files in that directory are distributed under the same license.
+MIT for original work. `archiso/` is derived from archiso's `releng` profile
+and stays [GPL-3.0-or-later](LICENSES/GPL-3.0-or-later.txt).

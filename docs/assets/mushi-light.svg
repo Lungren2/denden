@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <mask id="cut">
+      <rect width="1024" height="1024" fill="white"/>
+      <!-- rotary dial on the side of the shell -->
+      <circle cx="570" cy="530" r="108" fill="none" stroke="black" stroke-width="16"/>
+      <circle cx="604.0" cy="471.1" r="15" fill="black"/><circle cx="628.9" cy="496.0" r="15" fill="black"/><circle cx="638.0" cy="530.0" r="15" fill="black"/><circle cx="628.9" cy="564.0" r="15" fill="black"/><circle cx="604.0" cy="588.9" r="15" fill="black"/><circle cx="570.0" cy="598.0" r="15" fill="black"/><circle cx="536.0" cy="588.9" r="15" fill="black"/><circle cx="511.1" cy="564.0" r="15" fill="black"/><circle cx="502.0" cy="530.0" r="15" fill="black"/><circle cx="511.1" cy="496.0" r="15" fill="black"/>
+      <circle cx="570" cy="530" r="30" fill="black"/>
+      <!-- shell rim, separating the shell from the head and the foot -->
+      <path d="M299 530 A271 271 0 0 0 732 747" fill="none" stroke="black" stroke-width="16"/>
+      <!-- handset resting on the shell -->
+      <path d="M370 326 A274 274 0 0 1 770 326" fill="none" stroke="black" stroke-width="16"/>
+      <!-- mouth -->
+      <path d="M80 610 Q150 602 214 614" fill="none" stroke="black" stroke-width="16" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#1b1d22" mask="url(#cut)">
+    <!-- foot: flat sole, rounded front, tapering tail -->
+    <path d="M150 820 Q120 820 124 792 Q130 760 190 752 L820 742 Q900 740 960 790 Q975 806 950 812 L870 822 Z"/>
+    <!-- head and neck -->
+    <path d="M168 790 Q150 700 140 650 Q112 640 108 612 Q108 588 140 576 Q150 520 170 470
+             Q190 410 250 400 Q320 396 336 470 Q348 560 340 760 Z"/>
+    <!-- lips -->
+    <ellipse cx="138" cy="584" rx="64" ry="34"/>
+    <ellipse cx="150" cy="636" rx="58" ry="32"/>
+    <!-- eye stalks and eyes -->
+    <path d="M222 420 Q200 340 168 270" fill="none" stroke="#1b1d22" stroke-width="34" stroke-linecap="round"/>
+    <circle cx="160" cy="248" r="46"/>
+    <path d="M280 412 Q282 330 270 262" fill="none" stroke="#1b1d22" stroke-width="30" stroke-linecap="round"/>
+    <circle cx="268" cy="238" r="40"/>
+    <!-- shell -->
+    <circle cx="570" cy="530" r="262"/>
+    <!-- handset along the top of the shell -->
+    <path d="M420 246 Q570 158 720 246" fill="none" stroke="#1b1d22" stroke-width="44" stroke-linecap="round"/>
+    <ellipse cx="398" cy="276" rx="64" ry="34" transform="rotate(22 398 276)"/>
+    <ellipse cx="742" cy="276" rx="64" ry="34" transform="rotate(-22 742 276)"/>
+    <!-- coiled cord from the handset down the back of the shell to the tail -->
+    <path d="M796.0 298.0 L793.9 330.9 L838.8 339.5 L817.9 380.3 L862.0 393.0 L838.1 432.4 L881.3 449.2 L854.6 487.4 L896.6 508.1 L867.3 545.1 L907.9 569.7 L876.3 605.6 L915.2 634.0 L881.4 669.0 L918.6 701.0 L882.8 735.2 L900.0 770.0"
+          fill="none" stroke="#1b1d22" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
+  </g>
+</svg>
