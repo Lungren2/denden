@@ -286,6 +286,11 @@ ${repos}"
 install_conf=$(mktemp)
 sed "s|file:///var/lib/denden/repo|file://${LIVE_REPO}|" <<<"${target_conf}" > "${install_conf}"
 
+# The installed system ranks [denden-local] first: this machine's own builds from
+# /src (den src build), which shadow every other repo's package of the same
+# name. den's install script creates its (empty) database.
+target_conf=${target_conf/$'\n\n[denden]'/$'\n\n[denden-local]\nSigLevel = Optional TrustAll\nServer = file:///var/lib/denden/local\n\n[denden]'}
+
 # --- Files the kernel install hooks read, before the kernel is installed ----
 
 root_uuid=$(blkid -o value -s UUID "${root}")
