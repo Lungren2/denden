@@ -94,10 +94,16 @@ What the machine needs before it is the one you work on every day.
   vanish
 
 ## 3. Local source
-- [ ] `/src` tree; this repo at `/src/denden`
-- [ ] `den src get|build|diff|rebase|drop`
-- [ ] `[local]` overlay repo ranked above all others
-- [ ] Rebase-on-update for modified packages, with an agent session on conflicts
+- [x] `/src` tree; this repo at `/src/denden`
+- [x] `den src get|build|diff|rebase|drop|list` (package `den`): Arch and
+  CachyOS recipes at the installed version, the source after `prepare()` as
+  the `upstream` branch, local changes as commits on `main`
+- [x] `[denden-local]` overlay repo ranked above all others (pacman reserves
+  the name `local`)
+- [x] The daily update check reports changed packages the distro has moved
+  past; `den src rebase` carries the commits over
+- [ ] Rebase and rebuild them automatically, with an agent session on
+  conflicts (needs milestone 5's sessions)
 
 ## 4. Read-only contract
 - [ ] `dend` daemon (Rust) on a Varlink socket

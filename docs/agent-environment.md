@@ -128,8 +128,9 @@ den src rebase <pkg>   carry local changes onto a new upstream version
 den src drop <pkg>     return to the distro's build
 ```
 
-Builds land in a `[local]` overlay repo ranked above every other repo, so a
-modified package shadows the upstream one. When upstream ships a new version
+Builds land in a `[denden-local]` overlay repo ranked above every other repo
+(pacman reserves the name `local`), so a modified package shadows the
+upstream one. When upstream ships a new version
 of a package you've modified, the update rebases your commits and rebuilds. If
 the rebase conflicts, it opens an agent session to resolve it, which you
 review like any other session.

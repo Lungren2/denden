@@ -11,8 +11,9 @@ the part below and change it.
 
 - Arch Linux with CachyOS repositories and the `linux-cachyos` kernel
   (`linux-cachyos-lts` is the fallback in the recovery menu).
-- Package repositories in priority order: `[denden]` (this system's own
-  packages), `[cachyos]`, then Arch's `core` and `extra`.
+- Package repositories in priority order: `[denden-local]` (programs changed on
+  this machine with `den src`), `[denden]` (this system's own packages),
+  `[cachyos]`, then Arch's `core` and `extra`.
 - Btrfs. Root (`/`) is snapshotted before and after every pacman transaction;
   `/home` and `/src` are snapshotted hourly. `snapper list-configs` and
   `snapper -c root list` show them, and the recovery menu (hold a key as Den
@@ -96,23 +97,28 @@ something the user wants on every Den Den machine, change the package.
 
 ## Changing any other program
 
-Every program on this system can be rebuilt from source here. To modify one:
+Every program on this system can be changed from its source with `den src`:
 
 ```sh
-expac -S %e <package>        # its pkgbase, the name its recipe is filed under
-cd /src
-pkgctl repo clone --protocol=https <pkgbase>
-cd <pkgbase>
-# edit the PKGBUILD, or add a patch to source=() and apply it in prepare()
-makepkg -si
+den src get <package>     # recipe + source of the installed version → /src/<pkgbase>
+cd /src/<pkgbase>         # a git repo: edit the source under src/, or the PKGBUILD
 git commit -am '<what you changed and why>'
+den src build <package>   # build, publish to [denden-local], install
+den src diff <package>    # your changes against the distro's package
+den src drop <package>    # back to the distro's package; the tree stays
 ```
 
-Packages from `[cachyos]` (`pacman -Si <package>` shows the repository) have
-their recipes in https://github.com/CachyOS/CachyOS-PKGBUILDS instead.
+The tree's `upstream` branch is the package exactly as the distro builds it
+(the recipe plus the source after `prepare()`); `main` is that plus your
+commits. Builds go to the `[denden-local]` repo, ranked above every other repo, so
+your build stays installed through updates. When the distro ships a newer
+version, `den src list` and the daily update check say so; `den src rebase
+<package>` carries your commits onto it (on conflicts it stops for you to
+resolve them with git), then `den src build`. Tell the user which packages
+you changed.
 
-Until a `den src` command exists, the next pacman update of a package you
-rebuilt replaces your build. Tell the user which packages you rebuilt.
+Den Den's own packages are not fetched this way: their recipes are in
+`/src/denden/packages` (see above).
 
 ## Where to look
 

@@ -149,6 +149,16 @@ are backed up whenever the stick is plugged in and daily while it is, and a
 notification asks for the stick when the last backup is three days old.
 Restore with `denden-backup restic restore latest --target <dir> --include <path>`.
 
+## Changing any program
+
+Any package on the system can be changed from its source. `den src get
+<package>` puts the distro's recipe and the source of the installed version
+in `/src/<pkgbase>` as a git repo; commit your changes there and `den src
+build <package>` installs them from the `[denden-local]` repo, which shadows
+every other repo. `den src diff` shows your changes, `den src rebase` carries
+them onto a newer distro version (the daily update check says when one is
+out), and `den src drop` goes back to the distro's package.
+
 ## Package updates
 
 `denden-update check` reports differences between installed Den Den packages,
