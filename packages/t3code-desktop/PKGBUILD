@@ -55,6 +55,14 @@ prepare() {
   cd "t3code-${pkgver}"
   patch -Np1 -i "${srcdir}/local-electron-dist.patch"
 
+  # Upstream caps the glibc its Linux builds may need at Ubuntu 24.04's, so
+  # its releases run on older distros. This one runs only on Den Den, on
+  # Arch's Electron built against this system's glibc: cap it at that.
+  local glibc
+  glibc="$(getconf GNU_LIBC_VERSION | cut -d' ' -f2)"
+  sed -i "s/^const GLIBC_BUILD_CEILING = \".*\";/const GLIBC_BUILD_CEILING = \"${glibc}\";/" scripts/linux-glibc.ts
+  grep -q "GLIBC_BUILD_CEILING = \"${glibc}\"" scripts/linux-glibc.ts
+
   # pnpm's prepare step (`vp config`) installs git hooks into whatever repo
   # it finds; stop git from finding one above the source tree.
   export GIT_CEILING_DIRECTORIES="${srcdir}"
