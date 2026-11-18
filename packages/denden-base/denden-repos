@@ -21,7 +21,7 @@ if [[ ${1:-} == --sign-in ]]; then
 fi
 
 if ! gh auth status --hostname github.com >/dev/null 2>&1; then
-  echo "Not signed in to GitHub. Open \"Sign in to GitHub\" from the launcher, or run: denden-repos --sign-in"
+  echo "Not signed in to GitHub. Open \"Set up Den Den\" from the launcher, or run: denden-repos --sign-in"
   exit 0
 fi
 

@@ -130,19 +130,21 @@ The desktop is Niri with a taskbar from [Noctalia](https://github.com/noctalia-d
 the Den Den mark opens the launcher (also Super+Space), quick settings for
 Wi-Fi, Bluetooth and sound are on the right (Super+S), and Settings is
 Super+Comma. T3 Code opens maximized at login; Super+Shift+Slash lists every
-shortcut. Open **Sign in to GitHub** from the launcher once, and every
-repository you own or that your organisations own is cloned into
-`~/Projects` and kept up to date hourly (`denden-repos`).
+shortcut. The desktop follows T3 Code's design system (its colours, Inter,
+its glass and radii), so the system reads as part of the app.
 
-To reach the machine from your other devices, open **Connect to Tailscale**
-from the launcher (it also allows SSH over Tailscale) and sign in to T3
-Connect in T3 Code's settings. The firewall refuses every other inbound
+At the first login, **Set up Den Den** (also in the launcher) connects three
+things. Sign in to GitHub, and every repository you own or that your
+organisations own is cloned into `~/Projects` and kept up to date hourly
+(`denden-repos`). Connect Tailscale to reach the machine from your other
+devices (it also allows SSH over Tailscale), and sign in to T3 Connect in T3
+Code's settings. The firewall refuses every other inbound
 connection. Projects can pin their own tool versions in a `mise.toml`.
 
-Backups go to the Den Den USB stick: with it plugged in, open **Set up
-backups** from the launcher. It adds a backup partition after the Den Den
-image (the stick stays bootable) and prints the key the backups are encrypted
-with; keep that key in your password manager. After that, `/home` and `/src`
+Backups go to the Den Den USB stick: with it plugged in, the last step of
+**Set up Den Den** adds a backup partition after the Den Den image (the stick
+stays bootable) and shows the key the backups are encrypted with; keep that
+key in your password manager. After that, `/home` and `/src`
 are backed up whenever the stick is plugged in and daily while it is, and a
 notification asks for the stick when the last backup is three days old.
 Restore with `denden-backup restic restore latest --target <dir> --include <path>`.
