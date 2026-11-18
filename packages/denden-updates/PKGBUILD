@@ -1,21 +1,27 @@
 # Maintainer: Ethan <ethanogle012@outlook.com>
 pkgname=denden-updates
 pkgver=0.1.0
-pkgrel=6
-pkgdesc='Build, publish and check updates for Den Den packages'
+pkgrel=7
+pkgdesc='Build, publish, check and update the recipes of Den Den packages'
 arch=('any')
 url='https://github.com/Lungren2/denden'
 license=('MIT')
 depends=('python' 'pacman' 'git' 'base-devel' 'systemd' 'libnotify' 'sudo')
-source=('denden-update' 'denden-publish' 'denden-updates.service' 'denden-updates.timer')
-sha256sums=('91cd24e64722e83a590d84d3b438e43db4affd60b568bfc47d4c73dcf05ca2f9'
+source=('denden-update' 'denden-publish' 'denden-updates.service' 'denden-updates.timer'
+        'denden-recipes.service' 'denden-recipes.timer')
+sha256sums=('c9d2740c84a17845fedf489402bdcfd8147e85469d6b188d5f73e1e33bc3bcf2'
             'bf421663f0a4e8d3615390fc0e56e8540bd9cc6cc358753b62939d93ddaf8cf3'
             '5021fde476eae5bde032071d08d70d6baec6274019712f3335a8cf8f4f0298eb'
-            '56884f387a40d02083c07103326d082e5eb2cd6e4aa300c11ed72f1c0636e396')
+            '56884f387a40d02083c07103326d082e5eb2cd6e4aa300c11ed72f1c0636e396'
+            'b2a41add464c80694c83e72e10ef374af52e87ecd3b09eef37c8baa7b3fa1f2c'
+            '60eb66ac223a362ae75d92b5c01621d574afc887d143bcd24caadb738005918a')
 
 package() {
   install -Dm755 -t "$pkgdir/usr/bin" denden-update denden-publish
-  install -Dm644 -t "$pkgdir/usr/lib/systemd/user" denden-updates.service denden-updates.timer
+  install -Dm644 -t "$pkgdir/usr/lib/systemd/user" denden-{updates,recipes}.{service,timer}
   install -d "$pkgdir/usr/lib/systemd/user/timers.target.wants"
-  ln -s ../denden-updates.timer "$pkgdir/usr/lib/systemd/user/timers.target.wants/denden-updates.timer"
+  local timer
+  for timer in denden-updates.timer denden-recipes.timer; do
+    ln -s "../$timer" "$pkgdir/usr/lib/systemd/user/timers.target.wants/$timer"
+  done
 }

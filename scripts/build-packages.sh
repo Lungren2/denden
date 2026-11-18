@@ -7,7 +7,9 @@
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-repo_dir="${repo_root}/repo/x86_64"
+# DENDEN_PKGDEST and SRCDEST let a build from another worktree (denden-update
+# bump) put its packages and downloads in the main checkout's.
+repo_dir="${DENDEN_PKGDEST:-${repo_root}/repo/x86_64}"
 repo_db="${repo_dir}/denden.db.tar.gz"
 
 if [[ ${EUID} -eq 0 ]]; then
@@ -29,7 +31,7 @@ else
 fi
 mkdir -p -- "${repo_dir}"
 export PKGDEST="${repo_dir}"
-export SRCDEST="${repo_root}/repo/sources"
+export SRCDEST="${SRCDEST:-${repo_root}/repo/sources}"
 # Build outside this repo's working tree, so package build scripts that look
 # for an enclosing git repo (e.g. to install hooks) can't find this one.
 export BUILDDIR="${XDG_CACHE_HOME:-${HOME}/.cache}/denden/build"

@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 """Den Den package maintenance. Checks never refresh the live pacman database."""
 import argparse
+import fcntl
+import functools
 import json
 import os
 from pathlib import Path
@@ -9,6 +11,18 @@ import shutil
 import subprocess
 import sys
 import urllib.request
+
+# Recipes that follow an upstream project's stable releases (GitHub owner/repo).
+RELEASES = {
+    't3code-cli': 'pingdotgg/t3code',
+    't3code-cli-bin': 'pingdotgg/t3code',
+    't3code-desktop': 'pingdotgg/t3code',
+    'noctalia': 'noctalia-dev/noctalia',
+}
+NAMES = {'t3code-cli': 'T3 Code', 't3code-cli-bin': 'T3 Code', 't3code-desktop': 'T3 Code',
+         'noctalia': 'The taskbar'}
+STATE = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'denden'
+CACHE = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home() / '.cache'))) / 'denden'
 
 
 def run(*args, **kwargs):
@@ -47,6 +61,43 @@ def upstream_version(version):
     return version.split(':')[-1].rsplit('-', 1)[0]
 
 
+@functools.cache
+def latest_release(repository):
+    """The newest stable release's version. A failed lookup raises, never means “up to date”."""
+    request = urllib.request.Request(
+        f'https://api.github.com/repos/{repository}/releases/latest',
+        headers={'User-Agent': 'DenDen-update-check', 'Accept': 'application/vnd.github+json'})
+    with urllib.request.urlopen(request, timeout=25) as response:
+        release = json.load(response)
+    if release.get('draft') or release.get('prerelease'):
+        raise ValueError('latest endpoint returned a prerelease')
+    return release['tag_name'].removeprefix('v')
+
+
+def lock():
+    """One build at a time: bump and apply share the build directory."""
+    CACHE.mkdir(parents=True, exist_ok=True)
+    handle = open(CACHE / 'update.lock', 'w')
+    fcntl.flock(handle, fcntl.LOCK_EX)
+    return handle
+
+
+def build(root, names, **kwargs):
+    run('systemd-run', '--user', '--scope', '--quiet', '-p', 'MemoryMax=8G', '-p', 'CPUQuota=400%',
+        'nice', '-n', '10', str(root / 'scripts/build-packages.sh'), *names, **kwargs)
+
+
+def archives(root, names, pkgdest):
+    """Archives the current recipes select (never stale versions) that exist."""
+    env = dict(os.environ, PKGDEST=str(pkgdest))
+    found = []
+    for name in names:
+        paths = run('makepkg', '--packagelist', cwd=root / 'packages' / name,
+                    env=env, stdout=subprocess.PIPE).stdout.splitlines()
+        found.extend(path for path in paths if Path(path).is_file())
+    return found
+
+
 def check(root):
     local = installed()
     published = repo_versions('denden')
@@ -72,29 +123,27 @@ def check(root):
             if name in published and output('vercmp', published[name], local[name]) == '1':
                 action = 'upgrade available'
             messages.append(f'{name}: installed {local[name]}, repository {published.get(name, "missing")} — {action}')
-    # Stable releases only. A failed lookup is an error, never “up to date”.
-    for repository, packages in (
-        ('pingdotgg/t3code', ('t3code-cli', 't3code-cli-bin', 't3code-desktop')),
-        ('noctalia-dev/noctalia', ('noctalia',)),
-    ):
-        names = [name for name in packages if name in local]
-        if not names:
+    # Stable releases against the recipes; denden-update bump (daily, from
+    # denden-recipes.timer) moves the recipes and keeps what fails for review.
+    for name, repository in RELEASES.items():
+        if not (root / 'packages' / name / 'PKGBUILD').is_file():
             continue
         try:
-            request = urllib.request.Request(
-                f'https://api.github.com/repos/{repository}/releases/latest',
-                headers={'User-Agent': 'DenDen-update-check', 'Accept': 'application/vnd.github+json'})
-            with urllib.request.urlopen(request, timeout=25) as response:
-                release = json.load(response)
-            latest = release['tag_name'].removeprefix('v')
-            if release.get('draft') or release.get('prerelease'):
-                raise ValueError('latest endpoint returned a prerelease')
-            for name in names:
-                current = local[name].split(':')[-1].rsplit('-', 1)[0]
-                if output('vercmp', latest, current) == '1':
-                    messages.append(f'{name}: stable {latest} available (installed {current}); update recipe and verify patches')
+            latest = latest_release(repository)
         except Exception as exc:
-            errors.append(f'{repository}: {exc}')
+            if f'{repository}: {exc}' not in errors:
+                errors.append(f'{repository}: {exc}')
+            continue
+        current = upstream_version(recipe(root / 'packages' / name))
+        if output('vercmp', latest, current) == '1':
+            branch = f'recipe-update/{name}-{latest}'
+            log = STATE / 'recipe-updates' / f'{name}-{latest}.log'
+            if output('git', '-C', str(root), 'branch', '--list', branch):
+                messages.append(f'{name}: {latest} is on branch {branch}; ' + (
+                    f'it doesn\'t build yet (log: {log}) — fix it there, then merge it' if log.exists()
+                    else 'it builds — merge it into main'))
+            else:
+                messages.append(f'{name}: stable {latest} available (recipe {current}) — denden-update bump {name}')
     # These packages embed runtimes. An updated runtime needs a package rebuild,
     # even if T3 itself has not released a new version.
     for name, runtime in (('t3code-cli', 'nodejs'), ('t3code-desktop', 'electron44')):
@@ -140,26 +189,143 @@ def apply(root):
                    if (path / 'PKGBUILD').is_file() and path.name in local)
     if not names:
         raise ValueError('No installed Den Den packages found')
+    held = lock()
     run('sudo', 'pacman', '-Syu')
-    run('systemd-run', '--user', '--scope', '-p', 'MemoryMax=8G', '-p', 'CPUQuota=400%',
-        'nice', '-n', '10', str(root / 'scripts/build-packages.sh'), *names)
-    # Publish only archives selected by the current recipes (never stale versions).
-    archives = []
-    env = dict(os.environ, PKGDEST=str(root / 'repo/x86_64'))
-    for name in names:
-        paths = run('makepkg', '--packagelist', cwd=root / 'packages' / name,
-                    env=env, stdout=subprocess.PIPE).stdout.splitlines()
-        archives.extend(path for path in paths if Path(path).is_file())
-    if not archives:
+    build(root, names)
+    built = archives(root, names, root / 'repo/x86_64')
+    if not built:
         raise ValueError('Build produced no packages')
     print('Publishing completed packages, then performing a full system upgrade.', flush=True)
-    run('sudo', 'denden-publish', *archives)
+    run('sudo', 'denden-publish', *built)
     run('sudo', 'pacman', '-Syu')
+    held.close()
+
+
+def git(root, *args):
+    return output('git', '-C', str(root), *args)
+
+
+def set_version(pkgbuild, version, env):
+    """pkgver to VERSION, pkgrel to 1, and checksums for the new sources."""
+    text = pkgbuild.read_text()
+    text = re.sub(r'^pkgver=.*$', f'pkgver={version}', text, count=1, flags=re.M)
+    text = re.sub(r'^pkgrel=.*$', 'pkgrel=1', text, count=1, flags=re.M)
+    pkgbuild.write_text(text)
+    sums = run('makepkg', '-g', cwd=pkgbuild.parent, env=env,
+               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL).stdout
+    for key, body in re.findall(r'^(\w+sums)=\((.*?)\)', sums, re.M | re.S):
+        text, count = re.subn(rf'^{key}=\(.*?\)', lambda _: f'{key}=({body})',
+                              text, count=1, flags=re.M | re.S)
+        if not count:
+            raise ValueError(f'{pkgbuild}: no {key} array to update')
+    pkgbuild.write_text(text)
+
+
+def bump(root, only=(), notify=False):
+    """Move recipes to their upstream's newest stable release.
+
+    Each update is made on its own branch in a separate worktree, so the
+    checkout at ROOT isn't touched while it builds. A package installed here
+    is built from the new recipe; if that works, the branch is fast-forwarded
+    into main and the package published to [denden], to install with the next
+    full upgrade. If it doesn't, the attempt stays on its branch with the build
+    log, for review, and isn't retried until the branch is gone."""
+    if os.geteuid() == 0:
+        raise ValueError('Run as your normal user; only publishing uses sudo.')
+    if not (root / 'scripts/build-packages.sh').is_file():
+        raise ValueError(f'No Den Den checkout at {root}')
+    held = lock()
+    local = installed()
+    logs = STATE / 'recipe-updates'
+    logs.mkdir(parents=True, exist_ok=True)
+    (root / 'repo/sources').mkdir(parents=True, exist_ok=True)
+    # Downloads and packages go to the main checkout's, which apply reuses.
+    env = dict(os.environ, SRCDEST=str(root / 'repo/sources'),
+               DENDEN_PKGDEST=str(root / 'repo/x86_64'))
+    commit_env = dict(env, GIT_AUTHOR_NAME='denden-update', GIT_AUTHOR_EMAIL='denden-update@localhost')
+    done, failed, waiting, errors = [], [], [], []
+    for name, repository in RELEASES.items():
+        if (only and name not in only) or not (root / 'packages' / name / 'PKGBUILD').is_file():
+            continue
+        try:
+            latest = latest_release(repository)
+        except Exception as exc:
+            errors.append(f'{repository}: {exc}')
+            continue
+        current = upstream_version(recipe(root / 'packages' / name))
+        if output('vercmp', latest, current) != '1':
+            continue
+        branch = f'recipe-update/{name}-{latest}'
+        log = logs / f'{name}-{latest}.log'
+        if git(root, 'branch', '--list', branch):
+            waiting.append(f'{name} {latest}: on branch {branch}')
+            continue
+        tree = CACHE / 'recipe-updates' / name
+        git(root, 'worktree', 'prune')
+        if tree.exists():
+            shutil.rmtree(tree)
+        git(root, 'worktree', 'add', '--quiet', '-b', branch, str(tree), 'main')
+        building = name in local
+        ok = True
+        with open(log, 'w') as stream:
+            try:
+                set_version(tree / 'packages' / name / 'PKGBUILD', latest, env)
+                if building:
+                    build(tree, [name], env=env, stdout=stream, stderr=subprocess.STDOUT)
+            except (subprocess.CalledProcessError, ValueError) as exc:
+                ok = False
+                stream.write(f'\ndenden-update: {exc}\n')
+        if ok:
+            log.unlink()
+            note = ('It builds on this machine.' if building else
+                    'Checksums refreshed; not built here, where it isn\'t installed.')
+        else:
+            note = f"It doesn't build yet; the log is {log}."
+        run('git', '-C', str(tree), 'commit', '--quiet', '-am',
+            f'{name}: update to {latest}, the new stable release\n\n'
+            f'Made by denden-update bump. {note}', env=commit_env)
+        run('git', '-C', str(root), 'worktree', 'remove', '--force', str(tree))
+        if not ok:
+            failed.append(f'{name} {latest}: kept on branch {branch}; log {log}')
+            continue
+        # Into main only as a fast-forward of a clean checkout on main.
+        merged = False
+        if (subprocess.run(['git', '-C', str(root), 'symbolic-ref', '--quiet', '--short', 'HEAD'],
+                           text=True, capture_output=True).stdout.strip() == 'main'
+                and not git(root, 'status', '--porcelain', '--untracked-files=no')):
+            merged = subprocess.run(['git', '-C', str(root), 'merge', '--quiet', '--ff-only', branch],
+                                    capture_output=True).returncode == 0
+        if not merged:
+            waiting.append(f'{name} {latest}: builds; merge branch {branch} into main')
+            continue
+        git(root, 'branch', '--quiet', '-d', branch)
+        if building:
+            run('sudo', '-n', 'denden-publish', *archives(root, [name], root / 'repo/x86_64'),
+                stdout=subprocess.DEVNULL)
+        done.append(f'{name} {latest}')
+    held.close()
+    for line in ([f'updated: {item}' for item in done] + [f'needs review: {item}' for item in failed]
+                 + [f'waiting: {item}' for item in waiting] + errors):
+        print(line)
+    if not (done or failed or waiting or errors):
+        print('Recipes are at the latest stable releases.')
+    if notify:
+        def names(items):
+            return ' and '.join(sorted({NAMES.get(item.split()[0], item.split()[0]) for item in items}))
+        if done:
+            run('notify-send', '--app-name=Den Den', 'Updates ready',
+                f'{names(done)} will update with the next system update.')
+        if failed:
+            run('notify-send', '--app-name=Den Den', 'An update needs a look',
+                f'{names(failed)} couldn’t be updated automatically. Ask an agent to finish it.')
+    if failed or errors:
+        sys.exit(1)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=('check', 'apply'), nargs='?', default='check')
+    parser.add_argument('command', choices=('check', 'apply', 'bump'), nargs='?', default='check')
+    parser.add_argument('packages', nargs='*', help='bump: only these recipes')
     parser.add_argument('--source', type=Path, default=Path('/src/denden'))
     parser.add_argument('--json', action='store_true')
     parser.add_argument('--notify', action='store_true')
@@ -167,15 +333,17 @@ def main():
     if args.command == 'apply':
         apply(args.source)
         return
+    if args.command == 'bump':
+        bump(args.source, args.packages, args.notify)
+        return
     result = check(args.source)
     if args.json:
         print(json.dumps(result, indent=2))
     else:
         print('\n'.join(result['updates'] + result['errors']) or 'Den Den packages are up to date.')
     if args.notify:
-        state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'denden'
-        state.mkdir(parents=True, exist_ok=True)
-        previous = state / 'updates.json'
+        STATE.mkdir(parents=True, exist_ok=True)
+        previous = STATE / 'updates.json'
         serialized = json.dumps(result, sort_keys=True)
         if not previous.exists() or previous.read_text() != serialized:
             if result['errors']:

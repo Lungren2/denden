@@ -1,0 +1,11 @@
+[Unit]
+Description=Update Den Den recipes daily
+
+[Timer]
+OnCalendar=daily
+OnStartupSec=30min
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
