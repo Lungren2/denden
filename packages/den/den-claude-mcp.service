@@ -1,0 +1,9 @@
+[Unit]
+Description=Give Claude Code Den Den's machine tools
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/den/den-claude-mcp
+
+[Install]
+WantedBy=default.target

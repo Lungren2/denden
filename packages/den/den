@@ -1,6 +1,19 @@
 #!/usr/bin/python3
-"""den: Den Den's command line. For now, `den src`: change any program on the
-system from its source.
+"""den: Den Den's command line.
+
+  den doctor             is the machine healthy, and what needs a look
+  den machine inspect    hardware, kernel, firmware, disks and free space
+  den package query [NAME…] [--search TEXT]
+                         packages: versions, repositories, source trees
+  den service status [UNIT…] [--user|--system] [--failed]
+                         systemd units of the system and your session
+  den history query [TEXT] [--since 3d] [--limit N] [-v]
+                         package changes (with their snapshots), boots
+  den mcp                the same, as an MCP server for agents (stdio)
+
+These read the machine through dend, Den Den's machine API
+(/run/den/io.denden); every one takes --json. And den src changes any
+program on the system from its source:
 
   den src get <pkg>      fetch the recipe and source of the installed version
                          into /src/<pkgbase>, as a git repo
@@ -26,6 +39,12 @@ import re
 import shutil
 import subprocess
 import sys
+
+# contract.py sits next to this script in the recipe, in /usr/lib/den when
+# installed; no bytecode caches are left in either.
+sys.dont_write_bytecode = True
+sys.path[:0] = [str(Path(__file__).resolve().parent), '/usr/lib/den']
+import contract  # noqa: E402
 
 SRC = Path(os.environ.get('DEN_SRC', '/src'))
 CACHE = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'denden'
@@ -390,6 +409,33 @@ def main():
     parser = argparse.ArgumentParser(prog='den', description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     top = parser.add_subparsers(dest='area', required=True)
+
+    p = top.add_parser('doctor', help='is the machine healthy')
+    p.add_argument('--json', action='store_true')
+    p = top.add_parser('machine', help='the hardware and system').add_subparsers(dest='cmd', required=True)
+    p.add_parser('inspect').add_argument('--json', action='store_true')
+    p = top.add_parser('package', help='look up packages').add_subparsers(dest='cmd', required=True)
+    p = p.add_parser('query')
+    p.add_argument('names', nargs='*')
+    p.add_argument('--search')
+    p.add_argument('--json', action='store_true')
+    p = top.add_parser('service', help='systemd units').add_subparsers(dest='cmd', required=True)
+    p = p.add_parser('status')
+    p.add_argument('names', nargs='*')
+    scope = p.add_mutually_exclusive_group()
+    scope.add_argument('--user', action='store_true', help='your session only')
+    scope.add_argument('--system', action='store_true', help='the system only')
+    p.add_argument('--failed', action='store_true')
+    p.add_argument('--json', action='store_true')
+    p = top.add_parser('history', help='what happened on the machine').add_subparsers(dest='cmd', required=True)
+    p = p.add_parser('query')
+    p.add_argument('text', nargs='?')
+    p.add_argument('--since')
+    p.add_argument('--limit', type=int)
+    p.add_argument('-v', '--verbose', action='store_true', help='each change, and the snapshots')
+    p.add_argument('--json', action='store_true')
+    top.add_parser('mcp', help='serve these as MCP tools on stdin/stdout')
+
     src = top.add_parser('src', help='change any program from its source').add_subparsers(dest='cmd', required=True)
     for name, fn in (('get', cmd_get), ('build', cmd_build), ('diff', cmd_diff),
                      ('rebase', cmd_rebase), ('drop', cmd_drop)):
@@ -403,8 +449,12 @@ def main():
     p.add_argument('--json', action='store_true')
     p.set_defaults(fn=cmd_list)
     args = parser.parse_args()
+    if args.area == 'mcp':
+        sys.exit(contract.mcp())
+    if args.area != 'src':
+        sys.exit(contract.command(args))
     if os.geteuid() == 0:
-        raise SystemExit('den: run as your normal user; it uses sudo where it must')
+        raise SystemExit('den: run den src as your normal user; it uses sudo where it must')
     try:
         args.fn(args)
     except Fail as exc:

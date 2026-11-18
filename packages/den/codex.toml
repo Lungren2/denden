@@ -1,0 +1,6 @@
+# Den Den: Codex's system configuration, under each user's ~/.codex/config.toml.
+# The machine API (den mcp: health, packages, services, history) as tools in
+# every session.
+[mcp_servers.den]
+command = "/usr/bin/den"
+args = ["mcp"]

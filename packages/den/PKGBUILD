@@ -1,24 +1,39 @@
 # Maintainer: Ethan <ethanogle012@outlook.com>
 #
-# den, Den Den's command line. `den src` changes any program on the system
-# from its source: it fetches the distro's recipe and source into
+# den, Den Den's command line. `den doctor`, `den machine|package|service|
+# history` read the machine through dend, and `den mcp` serves the same to
+# agents as MCP tools (registered for Codex in /etc/codex/config.toml, and
+# for each user's Claude Code at login). `den src` changes any program on the
+# system from its source: it fetches the distro's recipe and source into
 # /src/<pkgbase> as a git repo, builds it into the [denden-local] repo (ranked above
 # every other repo in pacman.conf), and carries the changes onto new distro
 # versions.
 
 pkgname=den
 pkgver=0.1.0
-pkgrel=4
-pkgdesc="Den Den's command line: change any program from its source"
+pkgrel=6
+pkgdesc="Den Den's command line: the machine's state for agents, and any program changed from its source"
 arch=('any')
 url='https://github.com/Lungren2/denden'
 license=('MIT')
 depends=('python' 'pacman' 'expac' 'devtools' 'git' 'gnupg' 'base-devel'
-         'denden-updates')        # denden-publish
+         'denden-updates'         # denden-publish
+         'dend')
 install=den.install
-source=('den')
-sha256sums=('e74c796643d13e65e58c93dad9f879306cfdaa456e01e5eaac2ed560093a6824')
+backup=('etc/codex/config.toml')
+source=('den' 'contract.py' 'codex.toml' 'den-claude-mcp' 'den-claude-mcp.service')
+sha256sums=('87a101c991ec73edac074890e09785518f91f7e0bc4f08ed4ffaacaf3294cf4a'
+            '0f37872da3e357ce0c4e92f8e056742ce31645c795217cc18883519c931911e6'
+            '877c6efbea9f5744299dae2082bca2cb81956fc023fa7519806e0f4387276de3'
+            'f75b912d9c918d84a03f0dc09a0974d2bc5604959b63f24ae021153546a386e4'
+            '922ee5b9281987835c91c799fcdf5c26f8bf0d9c4a40f8bc72e49c3d2062818c')
 
 package() {
   install -Dm755 den "${pkgdir}/usr/bin/den"
+  install -Dm644 contract.py "${pkgdir}/usr/lib/den/contract.py"
+  install -Dm755 den-claude-mcp "${pkgdir}/usr/lib/den/den-claude-mcp"
+  install -Dm644 codex.toml "${pkgdir}/etc/codex/config.toml"
+  install -Dm644 -t "${pkgdir}/usr/lib/systemd/user" den-claude-mcp.service
+  install -d "${pkgdir}/usr/lib/systemd/user/default.target.wants"
+  ln -s ../den-claude-mcp.service "${pkgdir}/usr/lib/systemd/user/default.target.wants/den-claude-mcp.service"
 }

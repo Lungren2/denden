@@ -1,0 +1,10 @@
+#!/bin/sh
+# Give Claude Code Den Den's machine tools (den mcp), once per user. Claude
+# Code keeps MCP servers in each user's ~/.claude.json; the system-wide
+# alternative (managed-mcp.json) would shut out the user's own servers. A
+# user who removes it afterwards keeps it removed.
+marker=${XDG_STATE_HOME:-$HOME/.local/state}/denden/claude-mcp-added
+[ -e "$marker" ] && exit 0
+command -v claude >/dev/null || exit 0
+claude mcp get den >/dev/null 2>&1 || claude mcp add --scope user den -- /usr/bin/den mcp >/dev/null || exit 1
+mkdir -p "${marker%/*}" && touch "$marker"
