@@ -1,14 +1,14 @@
 # Maintainer: Ethan <ethanogle012@outlook.com>
 pkgname=denden-updates
 pkgver=0.1.0
-pkgrel=5
+pkgrel=6
 pkgdesc='Build, publish and check updates for Den Den packages'
 arch=('any')
 url='https://github.com/Lungren2/denden'
 license=('MIT')
 depends=('python' 'pacman' 'git' 'base-devel' 'systemd' 'libnotify' 'sudo')
 source=('denden-update' 'denden-publish' 'denden-updates.service' 'denden-updates.timer')
-sha256sums=('19cf3f3eaf34f065519c0f1001672377e8e7013cbbdec6b31da7ee49c72bbf42'
+sha256sums=('91cd24e64722e83a590d84d3b438e43db4affd60b568bfc47d4c73dcf05ca2f9'
             'bf421663f0a4e8d3615390fc0e56e8540bd9cc6cc358753b62939d93ddaf8cf3'
             '5021fde476eae5bde032071d08d70d6baec6274019712f3335a8cf8f4f0298eb'
             '56884f387a40d02083c07103326d082e5eb2cd6e4aa300c11ed72f1c0636e396')

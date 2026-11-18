@@ -34,12 +34,26 @@ def installed():
     return dict(line.split(' ', 1) for line in output('pacman', '-Q').splitlines())
 
 
+def repo_versions(repo):
+    """Name to version for one sync repo; empty when it isn't configured."""
+    try:
+        lines = output('pacman', '-Sl', repo).splitlines()
+    except subprocess.CalledProcessError:
+        return {}
+    return {name: version for _, name, version, *_ in (line.split() for line in lines)}
+
+
+def upstream_version(version):
+    return version.split(':')[-1].rsplit('-', 1)[0]
+
+
 def check(root):
     local = installed()
-    published = {}
-    for line in output('pacman', '-Sl', 'denden').splitlines():
-        _, name, version, *_ = line.split()
-        published[name] = version
+    published = repo_versions('denden')
+    # Builds made on this machine ([denden-local], from den src or a hand-made recipe) shadow
+    # Den Den's package on purpose, so they are never "unpublished"; only a newer Den Den
+    # recipe matters, because the local build should then move onto it.
+    local_builds = repo_versions('denden-local')
     messages = []
     errors = []
     for path in sorted((root / 'packages').iterdir()):
@@ -47,6 +61,10 @@ def check(root):
             continue
         name = path.name
         wanted = recipe(path)
+        if local_builds.get(name) == local[name]:
+            if output('vercmp', upstream_version(wanted), upstream_version(local[name])) == '1':
+                messages.append(f'{name}: built on this machine ({local[name]}); Den Den\'s recipe is now {wanted} — rebuild yours on it')
+            continue
         if output('vercmp', wanted, local[name]) == '1':
             messages.append(f'{name}: recipe {wanted}, installed {local[name]} — rebuild available')
         if published.get(name) != local[name]:
@@ -85,7 +103,10 @@ def check(root):
         info = output('pacman', '-Si', runtime)
         available = re.search(r'^Version\s*:\s*(\S+)', info, re.M)
         target = available[1] if available else local.get(runtime)
-        archives = sorted(Path('/var/lib/denden/repo').glob(f'{name}-*.pkg.tar.zst'))
+        archives = sorted(
+            archive
+            for repo in ('/var/lib/denden/repo', '/var/lib/denden/local')
+            for archive in Path(repo).glob(f'{name}-*.pkg.tar.zst'))
         for archive in archives:
             if output('pacman', '-Qp', str(archive)) != f'{name} {local[name]}':
                 continue
