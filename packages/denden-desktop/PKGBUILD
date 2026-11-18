@@ -11,13 +11,13 @@
 
 pkgname=denden-desktop
 pkgver=0.1.0
-pkgrel=8
+pkgrel=11
 pkgdesc='Den Den desktop: a Niri session with T3 Code as the main window'
 arch=('any')
 url='https://github.com/Lungren2/denden'
 license=('MIT')
 depends=(
-  'denden-base' 't3code-desktop'
+  'denden-base' 'denden-setup' 't3code-desktop'
   # Session
   'niri' 'xwayland-satellite' 'greetd'
   'xdg-desktop-portal-gnome' 'xdg-desktop-portal-gtk'
@@ -42,8 +42,8 @@ depends=(
   # The browser, which sign-ins from agents and CLIs open in too. Prebuilt
   # from CachyOS: a Chromium build here isn't worth its hours.
   'helium-browser-bin'
-  # The shell's typeface, and fallbacks
-  'adwaita-fonts' 'noto-fonts' 'noto-fonts-emoji'
+  # Typefaces: Inter, T3 Code's, for all text; fallbacks
+  'inter-font' 'noto-fonts' 'noto-fonts-emoji'
   # Tools the user's projects need
   'godot' 'blender'
 )
@@ -55,9 +55,6 @@ source=(
   'DenDen.json'
   'mimeapps.list'
   'dconf-denden'
-  'denden-github.desktop'
-  'denden-tailscale.desktop'
-  'denden-backup.desktop'
   'denden-backup-reminder'
   'denden-backup-reminder.service'
   'denden-backup-reminder.timer'
@@ -66,26 +63,23 @@ source=(
   'ghostty.config'
   'denden.fish'
   'starship.toml'
+  '60-denden-fonts.conf'
 )
-sha256sums=(
-  'bc27b8dfce00d96854083002e145e2afebfd2cfc79c238f17adf41c4ddd9ac16'
-  '5098d80a3d2bb6c609ea5bff21429605cb3142c92b47b0e25ac749f8e1b09ca7'
-  'a8b9d0dce1f3c08a9c22af5a48c240ea4c0493ceb907e7d92b8773ba79047bef'
-  'daba5531decf23aa3008a81ed9a1678443f146385f3064682de219adc004d7ae'
-  '1be143020d6d0c0ad89c28e1c85a8fd045bb68568b5eb93cdb1824ff75f9c665'
-  '4af02bb4a6365e718a30283d4c2fd11d124af6d8ecca48f695e4690e1e2e0beb'
-  '10a45838d327659625801934839d776e6a0c06ecde17ca605507e3cd49c378c4'
-  'f6989798a208a410ba9ee94d055e3c90c24aafce4f665aa77eb4d05843a5deef'
-  '579dec713a17c035f988722abb90d35fe96da45fa5639053dd09ba420d38461c'
-  'bae6b5b75817c78a88db47b1f47ee72cf99baed9dcbaed7751a1a021064981d9'
-  'fb767feba341e68d6df7c9ab5cdd76fd8cf674dcb01466db52b1f6400b1d9b0c'
-  '283c340df053b9cabf2fdd76356f08e687a828aeabe5d29d486ece0a2c092be4'
-  '1a04a9eb0e51c8eba4f06373c9e514012417f01295d4938ed0635932fb24cd47'
-  'a146c2b7418da7f26fa17cb49264df4bdcab0cae66e6c17e3b294118fd071e5c'
-  'e5b0f224b20656c11384ea8915596d69d5889fd7ffb6737bbc1caa9a4e569831'
-  '8b2b68ed14903aa7959f0f1c12d4bff356b3ec42f0f2dc874e89b1db409aaba5'
-  '7ed9f2c0374d20e3cd4d80809115f77909fc61b1ad825142c28cbfd50e73b987'
-)
+sha256sums=('e962b81c90f289ccac9cb9478b4a671d608a86af537c300fa856a556a729604e'
+            '5098d80a3d2bb6c609ea5bff21429605cb3142c92b47b0e25ac749f8e1b09ca7'
+            'ba43f2be7cd86e8c8acf0af617902c80d0115df0d70541cc0712d024f758a7ed'
+            '961f0db1099307855e11a747d5ff581ce276b863556b3ef071d4da910978c6f3'
+            '1be143020d6d0c0ad89c28e1c85a8fd045bb68568b5eb93cdb1824ff75f9c665'
+            'b192fd84bd7f819c48d2908bc59a03edd5e292b51f7f1d71d1fa3f2aef9a84c5'
+            'bae6b5b75817c78a88db47b1f47ee72cf99baed9dcbaed7751a1a021064981d9'
+            'fb767feba341e68d6df7c9ab5cdd76fd8cf674dcb01466db52b1f6400b1d9b0c'
+            '283c340df053b9cabf2fdd76356f08e687a828aeabe5d29d486ece0a2c092be4'
+            '1a04a9eb0e51c8eba4f06373c9e514012417f01295d4938ed0635932fb24cd47'
+            'e7e4e121ea6acc73a0877530a798926e3d38c2b2d97f6a0da138dba19efb6ce3'
+            'e5b0f224b20656c11384ea8915596d69d5889fd7ffb6737bbc1caa9a4e569831'
+            '8b2b68ed14903aa7959f0f1c12d4bff356b3ec42f0f2dc874e89b1db409aaba5'
+            '7ed9f2c0374d20e3cd4d80809115f77909fc61b1ad825142c28cbfd50e73b987'
+            '81611ad4dc2ee3a6726d1a9971c13ceea8af878b853865cfaaa94098e82ac378')
 
 build() {
   # The wallpaper, drawn at 1440p; Noctalia crops and scales it to the screen.
@@ -111,16 +105,8 @@ package() {
   ln -s ../app-com.mitchellh.ghostty.service \
     "${pkgdir}/usr/lib/systemd/user/graphical-session.target.wants/app-com.mitchellh.ghostty.service"
 
-  # A launcher entry to sign in to GitHub, after which denden-repos (from
-  # denden-base) brings the user's repositories into ~/Projects.
-  install -Dm644 denden-github.desktop "${pkgdir}/usr/share/applications/denden-github.desktop"
-
-  # And one to put the machine on the user's Tailscale network.
-  install -Dm644 denden-tailscale.desktop "${pkgdir}/usr/share/applications/denden-tailscale.desktop"
-
-  # Backups: a launcher entry to set them up on the Den Den stick, and a
-  # reminder when the last one is more than three days old.
-  install -Dm644 denden-backup.desktop "${pkgdir}/usr/share/applications/denden-backup.desktop"
+  # GitHub, Tailscale and backups are set up from denden-setup's window.
+  # Here: a reminder when the last backup is more than three days old.
   install -Dm755 denden-backup-reminder "${pkgdir}/usr/bin/denden-backup-reminder"
   install -Dm644 -t "${pkgdir}/usr/lib/systemd/user" denden-backup-reminder.service denden-backup-reminder.timer
   install -d "${pkgdir}/usr/lib/systemd/user/timers.target.wants"
@@ -137,6 +123,11 @@ package() {
   install -d "${pkgdir}/usr/lib/systemd/system/bluetooth.target.wants"
   ln -s ../bluetooth.service "${pkgdir}/usr/lib/systemd/system/bluetooth.target.wants/bluetooth.service"
   ln -s bluetooth.service "${pkgdir}/usr/lib/systemd/system/dbus-org.bluez.service"
+
+  # Inter and Cascadia Code as the system's sans-serif and monospace.
+  install -Dm644 60-denden-fonts.conf "${pkgdir}/usr/share/fontconfig/conf.avail/60-denden-fonts.conf"
+  install -d "${pkgdir}/usr/share/fontconfig/conf.default"
+  ln -s ../conf.avail/60-denden-fonts.conf "${pkgdir}/usr/share/fontconfig/conf.default/60-denden-fonts.conf"
 
   # Helium opens web links and pages; Files opens folders.
   install -Dm644 mimeapps.list "${pkgdir}/etc/xdg/mimeapps.list"

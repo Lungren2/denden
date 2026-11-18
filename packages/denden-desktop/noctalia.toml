@@ -2,31 +2,47 @@
 # center, notifications, wallpaper). denden-shell includes this file from
 # ~/.config/noctalia/config.toml, so anything set there wins, and so does
 # whatever you change in Noctalia's Settings.
+#
+# The desktop follows T3 Code's design system, so the OS reads as part of
+# the app: its black canvas and neutral greys, its blue only for actions and
+# switches that are on, Inter, and its glass (black at 80% over a blur, an 8%
+# white hairline, a deep soft shadow). Colours are in DenDen.json.
 
 [shell]
 polkit_agent = true                 # password prompts as dialogs, not terminals
-corner_radius_scale = 1.0
-font_family = "Adwaita Sans"
+corner_radius_scale = 1.333         # T3's radii: 16 px panels, 8 px controls
+font_family = "Inter Variable"
 telemetry_enabled = false
 setup_wizard_enabled = false      # Den Den has already made these choices
+avatar_path = "/usr/share/denden/boot/mushi-small.svg"   # quick settings' profile mark
+circular_avatar = false
 
-# Panels are frosted glass: niri blurs what is behind them, and a hairline
-# outline and a soft shadow set them off it.
+# Panels are T3's glass: niri blurs what is behind them (Den Den's Noctalia
+# patch sets the 80%), with a white hairline and a soft shadow below.
 [shell.panel]
 transparency_mode = "glass"
 borders = true
 border_width = 1.0
+border_color = "#ffffff1a"          # 8% white once the panel's 80% applies
 shadow = true
+list_item_background = false        # rows sit on the glass; the selected one is filled
 launcher_placement = "floating"
-launcher_position = "bottom_center"   # rises from the taskbar, like Start
+launcher_position = "center"        # where T3 opens its command palette
 
-# The launcher: search on top, pinned apps in a grid below it.
+[shell.shadow]
+direction = "down"
+alpha = 0.9
+
+# The launcher is T3's command palette: search on top, then a list of rows,
+# without Noctalia's category tabs and profile header.
 [shell.launcher]
+layout = "simple"
+categories = false                  # one list; typing searches everything
 pinned = ["t3code", "helium", "org.gnome.Nautilus", "com.mitchellh.ghostty"]
 default_view = "pinned"
 search_position = "top"
-width = 640
-app_grid = true
+width = 560
+app_grid = false
 show_app_origin_indicator = false
 
 [shell.window_switcher]
@@ -61,7 +77,7 @@ enabled = true
 
 # One floating glass bar along the bottom, like a taskbar: the Den Den mark
 # and your apps in the middle; status, notifications and the clock on the
-# right.
+# right. It is the same glass as T3's dialogs.
 #
 # Every button is the same size: 40 px tall (capsule_thickness of the bar),
 # with a 24 px icon, and its hover is a rounded square (capsule_radius).
@@ -70,7 +86,9 @@ enabled = true
 [bar.main]
 position = "bottom"
 thickness = 48
-background_opacity = 0.62
+background_opacity = 0.80
+border = "#ffffff14"                # T3's hairline: 8% white
+border_width = 1.0
 compositor_blur = true
 radius = 16
 margin_ends = 8
@@ -78,7 +96,7 @@ margin_edge = 8
 padding = 6
 widget_spacing = 12
 capsule_thickness = 0.84
-capsule_radius = 8
+capsule_radius = 10
 capsule_padding = 6
 shadow = true
 start = []
@@ -136,3 +154,9 @@ position = "bottom_center"
 
 [osd.kinds]
 lock_keys = false                   # no popup for Num Lock at every login
+
+# Quick settings: what a coding machine needs. Weather, the system monitor,
+# display settings and screen time are left out.
+[control_center]
+hidden_tabs = ["weather", "system", "monitor", "screen-time"]
+show_avatar_border = false          # the Den Den mark sits on the glass, unframed

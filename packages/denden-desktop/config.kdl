@@ -42,21 +42,21 @@ layout {
     focus-ring {
         off
     }
-    // A hairline edge, as on macOS and Windows 11: light catching the rim,
-    // a touch brighter on the window you're in.
+    // T3 Code's hairline: 8% white, a touch brighter on the window you're in.
     border {
         width 1
-        active-color "#ffffff26"
-        inactive-color "#ffffff12"
+        active-color "#ffffff1f"
+        inactive-color "#ffffff14"
     }
-    // A soft shadow lifts windows off the desktop and apart from each other.
+    // T3's dialog shadow (0 24px 72px -20px, black at 90%): deep and soft,
+    // pulled in under the window so its edges stay crisp.
     shadow {
         on
-        softness 36
-        spread 0
-        offset x=0 y=10
-        color "#0000008c"
-        inactive-color "#00000059"
+        softness 72
+        spread -20
+        offset x=0 y=24
+        color "#000000e6"
+        inactive-color "#000000a6"
     }
 }
 
@@ -130,6 +130,13 @@ animations {
 window-rule {
     geometry-corner-radius 12
     clip-to-geometry true
+}
+
+// Set up Den Den is a T3 Code dialog: 16 px corners, floating in the middle.
+window-rule {
+    match app-id="^denden-setup$"
+    open-floating true
+    geometry-corner-radius 16
 }
 
 screenshot-path "~/Pictures/Screenshots/%Y-%m-%d %H-%M-%S.png"
