@@ -107,11 +107,13 @@ What the machine needs before it is the one you work on every day.
   conflicts (needs milestone 5's sessions)
 
 ## 4. Read-only contract
-- [ ] `dend` daemon (Rust) on a Varlink socket
-- [ ] `den` CLI (`--json` everywhere): `machine inspect`, `package query`, `service status`, `history query`
-- [ ] `den doctor`: disk space, SSD health, failed units, T3 Code service,
-  Tailscale, age of the last backup
-- [ ] MCP server exposing the same operations
+- [x] `dend` daemon (Rust) on a Varlink socket (`/run/den/io.denden`,
+  socket-activated, read-only sandbox)
+- [x] `den` CLI (`--json` everywhere): `machine inspect`, `package query`, `service status`, `history query`
+- [x] `den doctor`: disk space, SSD health, failed units, T3 Code,
+  Tailscale, age of the last backup, snapshots, updates
+- [x] MCP server exposing the same operations (`den mcp`, registered for
+  Codex and Claude Code)
 
 ## 5. Agent sessions
 - [ ] `den session create|list|review|commit|discard`

@@ -150,7 +150,11 @@ den session create|list|review|commit|discard
 ```
 
 Every command takes `--json`, and the MCP server exposes the same schema as
-tools.
+tools. The read-only half is built: `dend` serves `io.denden.Machine`
+(`Inspect`, `Doctor`), `io.denden.Package.Query`, `io.denden.Service.Status`
+and `io.denden.History.Query` on `/run/den/io.denden`, and `den mcp` offers
+them as `machine_inspect`, `machine_doctor`, `package_query`,
+`service_status` and `history_query`.
 
 ## Where it's built
 

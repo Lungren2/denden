@@ -149,6 +149,24 @@ are backed up whenever the stick is plugged in and daily while it is, and a
 notification asks for the stick when the last backup is three days old.
 Restore with `denden-backup restic restore latest --target <dir> --include <path>`.
 
+## Asking the machine
+
+`den doctor` checks the machine's health: disk space and SMART health,
+failed services, T3 Code, Tailscale, the last backup, snapshots and package
+updates. `den machine inspect`, `den package query`, `den service status`
+and `den history query` answer the rest (every one takes `--json`), and
+`den mcp` serves the same operations to agents as MCP tools; Codex gets it
+from `/etc/codex/config.toml` and each user's Claude Code at first login.
+
+They're clients of `dend`, Den Den's machine API: a read-only Varlink service
+on `/run/den/io.denden`, started on demand by `dend.socket` and running as
+root in a read-only sandbox so it can read SMART data, snapper and each
+user's services. Its interfaces are `io.denden.Machine`, `.Package`,
+`.Service` and `.History` (`varlinkctl introspect /run/den/io.denden`).
+History comes from records the machine already keeps (pacman's log with the
+snapshots around each transaction, snapper, the journal's boots) until
+milestone 7's event log.
+
 ## Changing any program
 
 Any package on the system can be changed from its source. `den src get

@@ -70,6 +70,7 @@ override the system ones, so try a change there first.
 | Shell environment | bash (login shell; fish in the terminal starts from it), mise | `/etc/profile.d/denden.sh` (login shells), `/usr/lib/environment.d/50-denden.conf` (desktop session) | `denden-base` |
 | GitHub repositories | `denden-repos` (user timer) | `denden-repos.service`/`.timer` | `denden-base` |
 | Network and remote access | NetworkManager, Tailscale (`denden-tailscale`), `denden-firewall` | `/usr/share/denden/firewall.nft` | `denden-base` |
+| Machine API (`den doctor`, `den machine`/`package`/`service`/`history`, the `den` MCP tools) | `dend` (socket-activated system service, read-only) | interfaces in `/usr/share/varlink/io.denden.*.varlink`; MCP registration: `/etc/codex/config.toml`, and `claude mcp add --scope user` once per user (`den-claude-mcp.service`) | `dend`, `den` |
 | Package updates | `denden-update`, pacman | `denden-update check` reports recipe, release and runtime changes; after reviewing recipes, `denden-update apply` builds, publishes to `/var/lib/denden/repo`, then runs a full upgrade; daily check: `denden-updates.timer` (user); new upstream releases: `denden-update bump`, daily from `denden-recipes.timer`, which leaves a failed build on branch `recipe-update/<package>-<version>` (log in `~/.local/state/denden/recipe-updates/`): commit the fix on that branch, then `denden-update bump <package>` builds, lands and publishes it | `denden-updates` |
 | Backups | `denden-backup` (restic to the Den Den USB stick) | `/usr/share/denden/backup-excludes`; `denden-backup.timer` | `denden-base` |
 | Lid and power | systemd-logind | `/usr/lib/systemd/logind.conf.d/50-denden.conf` (override in `/etc/systemd/logind.conf.d/`) | `denden-base` |
@@ -121,6 +122,24 @@ Den Den's own packages are not fetched this way: their recipes are in
 `/src/denden/packages` (see above).
 
 ## Where to look
+
+Ask the machine first: `den doctor` says whether it's healthy and what needs
+a look (disk space and health, failed services, T3 Code, Tailscale, backups,
+snapshots, updates). The same API answers, read-only and with `--json`:
+
+```sh
+den machine inspect                    # hardware, kernel, firmware, disks, free space
+den package query <name>…              # installed/available versions, repo, source tree
+den package query --search <text>
+den service status <unit>… [--user]    # or no units: every failed one
+den history query [text] --since 3d -v # package changes with their root snapshots, boots
+```
+
+In Claude Code and Codex these are MCP tools too (`den` server:
+`machine_doctor`, `machine_inspect`, `package_query`, `service_status`,
+`history_query`); prefer them to parsing shell output. They come from
+`dend`, a Varlink service on `/run/den/io.denden` (`varlinkctl introspect
+/run/den/io.denden`).
 
 - Logs: `journalctl`, `journalctl --user`, `/var/log/pacman.log`
 - Snapshots: `snapper -c root list`
