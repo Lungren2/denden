@@ -140,8 +140,8 @@ def check(root):
             log = STATE / 'recipe-updates' / f'{name}-{latest}.log'
             if output('git', '-C', str(root), 'branch', '--list', branch):
                 messages.append(f'{name}: {latest} is on branch {branch}; ' + (
-                    f'it doesn\'t build yet (log: {log}) — fix it there, then merge it' if log.exists()
-                    else 'it builds — merge it into main'))
+                    f'it doesn\'t build yet (log: {log}) — commit a fix there, then denden-update bump {name}'
+                    if log.exists() else 'it builds, and lands in main once the checkout has no uncommitted changes'))
             else:
                 messages.append(f'{name}: stable {latest} available (recipe {current}) — denden-update bump {name}')
     # These packages embed runtimes. An updated runtime needs a package rebuild,
@@ -221,6 +221,26 @@ def set_version(pkgbuild, version, env):
     pkgbuild.write_text(text)
 
 
+def land(root, tree, branch, name):
+    """Fast-forward main to BRANCH (checked out in TREE), first rebasing it onto
+    main if main has moved. Only into a clean checkout that is on main, and
+    never over other changes to the same recipe, which the build didn't see."""
+    head = subprocess.run(['git', '-C', str(root), 'symbolic-ref', '--quiet', '--short', 'HEAD'],
+                          text=True, capture_output=True).stdout.strip()
+    if head != 'main' or git(root, 'status', '--porcelain', '--untracked-files=no'):
+        return False
+    base = git(root, 'merge-base', 'main', branch)
+    if subprocess.run(['git', '-C', str(root), 'diff', '--quiet', base, 'main', '--',
+                       f'packages/{name}']).returncode:
+        return False
+    if subprocess.run(['git', '-C', str(tree), 'rebase', '--quiet', 'main'],
+                      capture_output=True).returncode:
+        subprocess.run(['git', '-C', str(tree), 'rebase', '--abort'], capture_output=True)
+        return False
+    return subprocess.run(['git', '-C', str(root), 'merge', '--quiet', '--ff-only', branch],
+                          capture_output=True).returncode == 0
+
+
 def bump(root, only=(), notify=False):
     """Move recipes to their upstream's newest stable release.
 
@@ -228,8 +248,10 @@ def bump(root, only=(), notify=False):
     checkout at ROOT isn't touched while it builds. A package installed here
     is built from the new recipe; if that works, the branch is fast-forwarded
     into main and the package published to [denden], to install with the next
-    full upgrade. If it doesn't, the attempt stays on its branch with the build
-    log, for review, and isn't retried until the branch is gone."""
+    full upgrade (a checkout with uncommitted changes makes it wait for the
+    next run). If it doesn't build, the attempt stays on its branch with the
+    build log, for review; commit a fix on the branch and the next run builds
+    it again."""
     if os.geteuid() == 0:
         raise ValueError('Run as your normal user; only publishing uses sudo.')
     if not (root / 'scripts/build-packages.sh').is_file():
@@ -257,46 +279,50 @@ def bump(root, only=(), notify=False):
             continue
         branch = f'recipe-update/{name}-{latest}'
         log = logs / f'{name}-{latest}.log'
-        if git(root, 'branch', '--list', branch):
-            waiting.append(f'{name} {latest}: on branch {branch}')
-            continue
+        building = name in local
         tree = CACHE / 'recipe-updates' / name
         git(root, 'worktree', 'prune')
         if tree.exists():
             shutil.rmtree(tree)
-        git(root, 'worktree', 'add', '--quiet', '-b', branch, str(tree), 'main')
-        building = name in local
-        ok = True
-        with open(log, 'w') as stream:
-            try:
-                set_version(tree / 'packages' / name / 'PKGBUILD', latest, env)
-                if building:
-                    build(tree, [name], env=env, stdout=stream, stderr=subprocess.STDOUT)
-            except (subprocess.CalledProcessError, ValueError) as exc:
-                ok = False
-                stream.write(f'\ndenden-update: {exc}\n')
-        if ok:
-            log.unlink()
-            note = ('It builds on this machine.' if building else
-                    'Checksums refreshed; not built here, where it isn\'t installed.')
+        fresh = not git(root, 'branch', '--list', branch)
+        if not fresh and log.exists() and git(root, 'log', '-1', '--format=%an', branch) == 'denden-update':
+            # A failed attempt nobody has fixed yet.
+            waiting.append(f'{name} {latest}: needs review on branch {branch}; log {log}')
+            continue
+        if fresh:
+            git(root, 'worktree', 'add', '--quiet', '-b', branch, str(tree), 'main')
         else:
-            note = f"It doesn't build yet; the log is {log}."
-        run('git', '-C', str(tree), 'commit', '--quiet', '-am',
-            f'{name}: update to {latest}, the new stable release\n\n'
-            f'Made by denden-update bump. {note}', env=commit_env)
-        run('git', '-C', str(root), 'worktree', 'remove', '--force', str(tree))
+            # Built before but not landed, or fixed since it failed.
+            git(root, 'worktree', 'add', '--quiet', str(tree), branch)
+        ok = True
+        if fresh or log.exists():
+            with open(log, 'w') as stream:
+                try:
+                    if fresh:
+                        set_version(tree / 'packages' / name / 'PKGBUILD', latest, env)
+                    if building:
+                        build(tree, [name], env=env, stdout=stream, stderr=subprocess.STDOUT)
+                except (subprocess.CalledProcessError, ValueError) as exc:
+                    ok = False
+                    stream.write(f'\ndenden-update: {exc}\n')
+            if ok:
+                log.unlink()
+            if fresh:
+                note = (f"It doesn't build yet; the log is {log}." if not ok else
+                        'It builds on this machine.' if building else
+                        'Checksums refreshed; not built here, where it isn\'t installed.')
+                run('git', '-C', str(tree), 'commit', '--quiet', '-am',
+                    f'{name}: update to {latest}, the new stable release\n\n'
+                    f'Made by denden-update bump. {note}', env=commit_env)
         if not ok:
+            run('git', '-C', str(root), 'worktree', 'remove', '--force', str(tree))
             failed.append(f'{name} {latest}: kept on branch {branch}; log {log}')
             continue
-        # Into main only as a fast-forward of a clean checkout on main.
-        merged = False
-        if (subprocess.run(['git', '-C', str(root), 'symbolic-ref', '--quiet', '--short', 'HEAD'],
-                           text=True, capture_output=True).stdout.strip() == 'main'
-                and not git(root, 'status', '--porcelain', '--untracked-files=no')):
-            merged = subprocess.run(['git', '-C', str(root), 'merge', '--quiet', '--ff-only', branch],
-                                    capture_output=True).returncode == 0
-        if not merged:
-            waiting.append(f'{name} {latest}: builds; merge branch {branch} into main')
+        landed = land(root, tree, branch, name)
+        run('git', '-C', str(root), 'worktree', 'remove', '--force', str(tree))
+        if not landed:
+            waiting.append(f'{name} {latest}: builds; on branch {branch} until main is clean '
+                           '(or merge it yourself)')
             continue
         git(root, 'branch', '--quiet', '-d', branch)
         if building:

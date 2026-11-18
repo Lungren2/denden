@@ -1,7 +1,7 @@
 # Maintainer: Ethan <ethanogle012@outlook.com>
 pkgname=denden-updates
 pkgver=0.1.0
-pkgrel=7
+pkgrel=8
 pkgdesc='Build, publish, check and update the recipes of Den Den packages'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -9,7 +9,7 @@ license=('MIT')
 depends=('python' 'pacman' 'git' 'base-devel' 'systemd' 'libnotify' 'sudo')
 source=('denden-update' 'denden-publish' 'denden-updates.service' 'denden-updates.timer'
         'denden-recipes.service' 'denden-recipes.timer')
-sha256sums=('c9d2740c84a17845fedf489402bdcfd8147e85469d6b188d5f73e1e33bc3bcf2'
+sha256sums=('600cf0e62817bb393bf0bbe1e2784b4a6ff6fd0fe69c00b2cca77c3d594c8bcc'
             'bf421663f0a4e8d3615390fc0e56e8540bd9cc6cc358753b62939d93ddaf8cf3'
             '5021fde476eae5bde032071d08d70d6baec6274019712f3335a8cf8f4f0298eb'
             '56884f387a40d02083c07103326d082e5eb2cd6e4aa300c11ed72f1c0636e396'
