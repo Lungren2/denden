@@ -52,8 +52,8 @@ What the machine needs before it is the one you work on every day.
 - [x] Helium as the default browser (`helium-browser-bin` from CachyOS), which
   sign-ins from agents and CLIs open in too; Firefox removed
 - [ ] Microsoft Edge as the alternative (`microsoft-edge-stable-bin`: no public
-  source), once packages built here update themselves: a browser can't sit on
-  a pinned version
+  source), now that recipes update themselves: a browser can't sit on a pinned
+  version
 - [x] `linux-cachyos-lts` beside `linux-cachyos`, as the fallback kernel in
   the recovery menu
 - [x] Reachable from anywhere: T3 Connect through the desktop app's own
@@ -72,8 +72,12 @@ What the machine needs before it is the one you work on every day.
   `[denden]` repo; daily checks for newer recipes, stable upstream releases,
   and embedded runtimes; `denden-update apply` builds reviewed recipes and
   performs a full pacman upgrade
-- [ ] Automated upstream recipe updates and patch rebases (failed builds need
-  review); signed remote publishing for other Den Den machines
+- [x] Automated upstream recipe updates: `denden-update bump`, daily from
+  `denden-recipes.timer`, moves recipes to new stable releases on a branch,
+  builds and publishes them; failed builds (a patch that no longer applies)
+  stay on the branch for review
+- [ ] Signed remote publishing, so other Den Den machines install these
+  builds instead of each building its own
 - [x] A setup wizard for the GitHub sign-in and the other first-run choices
   (`denden-setup`: GitHub, Tailscale and backups in one window)
 - [x] The desktop in T3 Code's design system: its palette, Inter, glass and

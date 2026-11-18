@@ -168,6 +168,19 @@ T3 builds. `--json` returns the same report for agents. The user timer
 `denden-updates.timer` checks daily and sends a notification when the report
 changes; a failed lookup is reported, never treated as “up to date”.
 
+New stable T3 Code and Noctalia releases don't wait for a person:
+`denden-recipes.timer` runs `denden-update bump` daily. It moves each recipe
+to the new release on its own branch (`recipe-update/<package>-<version>`) in
+a separate worktree, with fresh checksums, and builds it if the package is
+installed. A build that works is fast-forwarded into `main` and published, so
+it installs with the next full upgrade; one that fails, usually a patch that
+no longer applies, stays on its branch with the build log in
+`~/.local/state/denden/recipe-updates/` and a notification asking for an
+agent to finish it: commit the fix on that branch, and the next run (or
+`denden-update bump <package>`) builds it again and lands it. A branch that
+builds while `/src/denden` has uncommitted changes waits for the next run;
+if `main` has moved, the update is rebased onto it first.
+
 After reviewing and updating recipes, run `denden-update apply` as your user.
 It first performs a full system upgrade, then builds installed Den Den packages
 under a memory/CPU limit, publishes completed packages into
