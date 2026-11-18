@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Sign in to GitHub
-Comment=Sign in, then bring your repositories into Projects
-Exec=ghostty +new-window --title="Sign in to GitHub" -e sh -c "denden-repos --sign-in; echo; read -rp 'Press Enter to close.'"
-Icon=github
-Terminal=false
-Categories=Development;

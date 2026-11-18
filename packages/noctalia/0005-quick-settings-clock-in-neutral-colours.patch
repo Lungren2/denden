@@ -1,0 +1,34 @@
+diff --git a/src/shell/control_center/tabs/home_tab.cpp b/src/shell/control_center/tabs/home_tab.cpp
+index 0c9ab03..d9cdca7 100644
+--- a/src/shell/control_center/tabs/home_tab.cpp
++++ b/src/shell/control_center/tabs/home_tab.cpp
+@@ -505,8 +505,9 @@ std::unique_ptr<Flex> HomeTab::create() {
+           .out = &m_timeLabel,
+           .text = formatShellTime(m_config),
+           .fontSize = Style::fontSizeTitle * 1.7F * scale,
+-          .fontWeight = FontWeight::Bold,
+-          .color = colorSpecFromRole(ColorRole::Primary),
++          .fontWeight = FontWeight::SemiBold,
++          // Den Den: neutral, as T3 Code keeps its blue for actions.
++          .color = colorSpecFromRole(ColorRole::OnSurface),
+       }),
+       ui::column(
+           {.align = FlexAlign::Start, .justify = FlexJustify::Center, .gap = Style::spaceXs * 0.5F * scale},
+@@ -522,7 +523,7 @@ std::unique_ptr<Flex> HomeTab::create() {
+                   .out = &m_weatherGlyph,
+                   .glyph = "weather-cloud-sun",
+                   .glyphSize = Style::fontSizeCaption * 1.12F * scale,
+-                  .color = colorSpecFromRole(ColorRole::Primary),
++                  .color = colorSpecFromRole(ColorRole::OnSurfaceVariant),
+               }),
+               ui::label({
+                   .out = &m_weatherLine,
+@@ -1519,7 +1520,7 @@ void HomeTab::sync(Renderer& renderer) {
+         );
+       } else {
+         m_weatherGlyph->setGlyph(WeatherService::glyphForCode(snapshot.current.weatherCode, snapshot.current.isDay));
+-        m_weatherGlyph->setColor(colorSpecFromRole(ColorRole::Primary));
++        m_weatherGlyph->setColor(colorSpecFromRole(ColorRole::OnSurfaceVariant));
+         const int t = static_cast<int>(std::lround(m_weather->displayTemperature(snapshot.current.temperatureC)));
+         m_weatherLine->setText(
+             std::format(

@@ -1,0 +1,52 @@
+diff --git a/src/shell/launcher/launcher_panel.cpp b/src/shell/launcher/launcher_panel.cpp
+index c8c21ec..b03bc33 100644
+--- a/src/shell/launcher/launcher_panel.cpp
++++ b/src/shell/launcher/launcher_panel.cpp
+@@ -447,10 +447,12 @@ namespace {
+ 
+   private:
+     void applyVisualState() {
++      // Den Den: T3 Code's command palette marks the selected row with a quiet
++      // fill, not its accent colour; hover is a lighter step of the same.
+       if (m_selected) {
+-        m_row->setFill(colorSpecFromRole(ColorRole::Primary));
+-      } else if (m_hovered) {
+         m_row->setFill(colorSpecFromRole(ColorRole::Hover));
++      } else if (m_hovered) {
++        m_row->setFill(colorSpecFromRole(ColorRole::Hover, 0.55F));
+       } else {
+         m_row->setFill(m_style.listItemBackground.value_or(clearColorSpec()));
+       }
+@@ -460,7 +462,7 @@ namespace {
+         m_row->clearBorder();
+       }
+ 
+-      const auto activeRole = m_selected ? ColorRole::OnPrimary : ColorRole::OnHover;
++      const auto activeRole = ColorRole::OnHover;
+       const bool active = m_selected || m_hovered;
+       const ColorSpec foreground = colorSpecFromRole(active ? activeRole : ColorRole::OnSurface);
+       const ColorSpec mutedForeground =
+@@ -706,10 +708,12 @@ namespace {
+ 
+   private:
+     void applyVisualState() {
++      // Den Den: T3 Code's command palette marks the selected row with a quiet
++      // fill, not its accent colour; hover is a lighter step of the same.
+       if (m_selected) {
+-        m_col->setFill(colorSpecFromRole(ColorRole::Primary));
+-      } else if (m_hovered) {
+         m_col->setFill(colorSpecFromRole(ColorRole::Hover));
++      } else if (m_hovered) {
++        m_col->setFill(colorSpecFromRole(ColorRole::Hover, 0.55F));
+       } else {
+         m_col->setFill(m_style.listItemBackground.value_or(clearColorSpec()));
+       }
+@@ -719,7 +723,7 @@ namespace {
+         m_col->clearBorder();
+       }
+ 
+-      const auto activeRole = m_selected ? ColorRole::OnPrimary : ColorRole::OnHover;
++      const auto activeRole = ColorRole::OnHover;
+       const bool active = m_selected || m_hovered;
+       const ColorSpec foreground = colorSpecFromRole(active ? activeRole : ColorRole::OnSurface);
+       m_badgeLabel->setColor(foreground);

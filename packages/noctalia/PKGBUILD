@@ -11,7 +11,7 @@
 _pkgname=noctalia
 pkgname=noctalia
 pkgver=5.5.0
-pkgrel=2
+pkgrel=4
 pkgdesc='A sleek, customizable desktop shell crafted for Wayland'
 arch=('x86_64' 'aarch64')
 url='https://github.com/noctalia-dev/noctalia'
@@ -67,10 +67,16 @@ makedepends=(
 )
 source=("${_pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver//_/-}.tar.gz"
         '0001-taskbar-tiles-fill-the-bar-hover-size.patch'
-        '0002-home-card-hide-version-strings.patch')
+        '0002-home-card-hide-version-strings.patch'
+        '0003-glass-panels-at-t3-code-opacity.patch'
+        '0004-launcher-selection-as-in-t3-code.patch'
+        '0005-quick-settings-clock-in-neutral-colours.patch')
 sha256sums=('f3fe8a1f1d4306280413e04f934400b787dba212d296d97dfd638bcb55c78262'
             'a4fd04d28e95a8da2415a7a590ccd845467c80a738e3b15c5a5498614b46b26c'
-            'af17460e7f407bda76e186a6181b229c5f119441216b0eed3e80b1ed6a939148')
+            'af17460e7f407bda76e186a6181b229c5f119441216b0eed3e80b1ed6a939148'
+            '80164d9e1989e9d25ba6dbd2356f92234b750d58eb87d7a69d959ffb63f53181'
+            '88e05cd675b5ae944b1b4b58358799eed32830926d4409e229c4c5875c5a9d9b'
+            '43768a935d4ee66a224198cf897fe30696f205f85cbf949bc15b8236052f6d92')
 
 prepare() {
   cd "${_pkgname}-${pkgver//_/-}"

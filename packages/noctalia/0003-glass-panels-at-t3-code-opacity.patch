@@ -1,0 +1,21 @@
+--- a/src/config/config_types.cpp	2026-11-16 21:36:56.527054607 +0200
++++ b/src/config/config_types.cpp	2026-11-16 21:36:56.539383408 +0200
+@@ -205,7 +205,7 @@
+   case PanelTransparencyMode::Soft:
+     return std::clamp(backgroundOpacity + 0.08F, 0.82F, 0.92F);
+   case PanelTransparencyMode::Glass:
+-    return std::clamp(backgroundOpacity + 0.10F, 0.62F, 0.75F);
++    return std::clamp(backgroundOpacity + 0.10F, 0.62F, 0.90F);
+   }
+   return 1.0F;
+ }
+@@ -217,7 +217,8 @@
+   case PanelTransparencyMode::Soft:
+     return 0.80F;
+   case PanelTransparencyMode::Glass:
+-    return 0.55F;
++    // Den Den: T3 Code's glass, its dialogs and menus at 80% over a blur.
++    return 0.80F;
+   }
+   return 1.0F;
+ }
