@@ -3,37 +3,44 @@
 # den, Den Den's command line. `den doctor`, `den machine|package|service|
 # history` read the machine through dend, and `den mcp` serves the same to
 # agents as MCP tools (registered for Codex in /etc/codex/config.toml, and
-# for each user's Claude Code at login). `den src` changes any program on the
-# system from its source: it fetches the distro's recipe and source into
+# for each user's Claude Code at login). `den session` runs agent work in a
+# sandbox on a Btrfs snapshot of the project (docs/session-storage.md), with
+# `den secret` holding what sessions may be granted. `den src` changes any
+# program on the system from its source: it fetches the distro's recipe and source into
 # /src/<pkgbase> as a git repo, builds it into the [denden-local] repo (ranked above
 # every other repo in pacman.conf), and carries the changes onto new distro
 # versions.
 
 pkgname=den
 pkgver=0.1.0
-pkgrel=6
-pkgdesc="Den Den's command line: the machine's state for agents, and any program changed from its source"
+pkgrel=7
+pkgdesc="Den Den's command line: the machine's state, sandboxed agent sessions, and any program changed from its source"
 arch=('any')
 url='https://github.com/Lungren2/denden'
 license=('MIT')
 depends=('python' 'pacman' 'expac' 'devtools' 'git' 'gnupg' 'base-devel'
          'denden-updates'         # denden-publish
-         'dend')
+         'dend'
+         'bubblewrap' 'btrfs-progs' 'libsecret' 'systemd')    # den session, den secret
+optdepends=('github-cli: session commits by your GitHub name and noreply address')
 install=den.install
 backup=('etc/codex/config.toml')
-source=('den' 'contract.py' 'codex.toml' 'den-claude-mcp' 'den-claude-mcp.service')
-sha256sums=('87a101c991ec73edac074890e09785518f91f7e0bc4f08ed4ffaacaf3294cf4a'
+source=('den' 'contract.py' 'session.py' 'codex.toml' 'den-claude-mcp' 'den-claude-mcp.service'
+        'den-sessions.slice')
+sha256sums=('ce4790f3675b4f167b7158d975bf536f5055e4c700ac80137cc1d459d3ccebe6'
             '0f37872da3e357ce0c4e92f8e056742ce31645c795217cc18883519c931911e6'
+            '70234c3011443af6a692779c8980bd463fa633a10912297691158978de9fe53d'
             '877c6efbea9f5744299dae2082bca2cb81956fc023fa7519806e0f4387276de3'
             'f75b912d9c918d84a03f0dc09a0974d2bc5604959b63f24ae021153546a386e4'
-            '922ee5b9281987835c91c799fcdf5c26f8bf0d9c4a40f8bc72e49c3d2062818c')
+            '922ee5b9281987835c91c799fcdf5c26f8bf0d9c4a40f8bc72e49c3d2062818c'
+            'b5b5a373e7694996bc9f9295437ff1b271a90b76e52ed6a56edbfcb1c47b8224')
 
 package() {
   install -Dm755 den "${pkgdir}/usr/bin/den"
-  install -Dm644 contract.py "${pkgdir}/usr/lib/den/contract.py"
+  install -Dm644 -t "${pkgdir}/usr/lib/den" contract.py session.py
   install -Dm755 den-claude-mcp "${pkgdir}/usr/lib/den/den-claude-mcp"
   install -Dm644 codex.toml "${pkgdir}/etc/codex/config.toml"
-  install -Dm644 -t "${pkgdir}/usr/lib/systemd/user" den-claude-mcp.service
+  install -Dm644 -t "${pkgdir}/usr/lib/systemd/user" den-claude-mcp.service den-sessions.slice
   install -d "${pkgdir}/usr/lib/systemd/user/default.target.wants"
   ln -s ../den-claude-mcp.service "${pkgdir}/usr/lib/systemd/user/default.target.wants/den-claude-mcp.service"
 }

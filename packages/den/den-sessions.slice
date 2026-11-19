@@ -1,0 +1,9 @@
+[Unit]
+Description=Den Den agent sessions
+
+# Sessions share the machine with the person using it: under load the
+# desktop wins. Each session has its own limits too (den session run).
+[Slice]
+CPUWeight=50
+IOWeight=50
+MemoryHigh=85%

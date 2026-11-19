@@ -12,8 +12,17 @@
   den mcp                the same, as an MCP server for agents (stdio)
 
 These read the machine through dend, Den Den's machine API
-(/run/den/io.denden); every one takes --json. And den src changes any
-program on the system from its source:
+(/run/den/io.denden); every one takes --json.
+
+  den session create <project> [--secret NAME…]
+                         a sandboxed session on a snapshot of the project
+  den session run <session> [-- command…]
+                         run in its sandbox (default: a shell)
+  den session list | review <session> | commit <session> [--merge] | discard <session>
+  den secret set|remove <NAME> | list
+                         secrets (API keys) sessions can be granted
+
+And den src changes any program on the system from its source:
 
   den src get <pkg>      fetch the recipe and source of the installed version
                          into /src/<pkgbase>, as a git repo
@@ -45,6 +54,7 @@ import sys
 sys.dont_write_bytecode = True
 sys.path[:0] = [str(Path(__file__).resolve().parent), '/usr/lib/den']
 import contract  # noqa: E402
+import session  # noqa: E402
 
 SRC = Path(os.environ.get('DEN_SRC', '/src'))
 CACHE = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'denden'
@@ -435,6 +445,7 @@ def main():
     p.add_argument('-v', '--verbose', action='store_true', help='each change, and the snapshots')
     p.add_argument('--json', action='store_true')
     top.add_parser('mcp', help='serve these as MCP tools on stdin/stdout')
+    session.add_parsers(top)
 
     src = top.add_parser('src', help='change any program from its source').add_subparsers(dest='cmd', required=True)
     for name, fn in (('get', cmd_get), ('build', cmd_build), ('diff', cmd_diff),
@@ -449,6 +460,8 @@ def main():
     p.add_argument('--json', action='store_true')
     p.set_defaults(fn=cmd_list)
     args = parser.parse_args()
+    if args.area in ('session', 'secret'):
+        sys.exit(session.main(args))
     if args.area == 'mcp':
         sys.exit(contract.mcp())
     if args.area != 'src':
