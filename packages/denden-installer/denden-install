@@ -167,7 +167,10 @@ mount "${root}" "${TARGET}"
 for sv in "${subvols[@]}"; do btrfs subvolume create "${TARGET}/${sv}"; done
 umount "${TARGET}"
 
-opts=noatime,compress=zstd:1
+# user_subvol_rm_allowed (Btrfs-wide): users delete subvolumes they own, so an
+# agent session's workspace snapshot is thrown away at once (den session).
+# Root's and snapper's subvolumes stay protected by their permissions.
+opts=noatime,compress=zstd:1,user_subvol_rm_allowed
 mount -o "${opts},subvol=@" "${root}" "${TARGET}"
 declare -A mountpoint=(
   [@home]=home [@src]=src [@snapshots]=.snapshots [@log]=var/log
