@@ -116,16 +116,25 @@ What the machine needs before it is the one you work on every day.
   Codex and Claude Code)
 
 ## 5. Agent sessions
-- [ ] `den session create|list|review|commit|discard`
-- [ ] Workspace snapshots, bubblewrap sandbox, cgroup limits
-- [ ] Storage measured on the real workload (many parallel worktrees with
+- [x] `den session create|run|list|review|commit|discard`; commit brings the
+  work back as branch `den/<session>` (`--merge` fast-forwards onto it)
+- [x] Workspace snapshots, bubblewrap sandbox (system read-only, home hidden,
+  no sudo), cgroup limits (a scope per run in `den-sessions.slice`)
+- [x] Storage measured on the real workload (many parallel worktrees with
   dependencies installed): Btrfs snapshots and reflinks against plain
   worktrees, with XFS on VDO as the comparison; the result decides the
-  session workspace
-- [ ] Shared package caches (pnpm store, Cargo, uv, npm); each session gets
-  its own ports, Compose project name and databases
-- [ ] A cap on concurrent sessions, so a build storm doesn't stall the desktop
-- [ ] Brokered secrets for model API keys
+  session workspace: a snapshot of a per-project base, ready in 0.05 s
+  ([session-storage.md](session-storage.md))
+- [x] Shared package caches (pnpm store, Cargo, uv, npm); each session gets
+  its own ports, Compose project name (and with it its databases' containers
+  and volumes)
+- [x] A cap on concurrent sessions, so a build storm doesn't stall the desktop
+- [x] Secrets for model API keys (`den secret`, in the Secret Service),
+  granted per session and given only to its sandbox, never written to disk
+  there
+- [ ] The agents' own sign-ins (`~/.claude`, `~/.codex`) handed to each
+  session by the broker instead of shared with all of them
+- [ ] T3 Code threads run in sessions
 
 ## 6. Broker
 - [ ] Capability grants per session, polkit policy, audit log

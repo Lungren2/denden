@@ -71,6 +71,7 @@ override the system ones, so try a change there first.
 | GitHub repositories | `denden-repos` (user timer) | `denden-repos.service`/`.timer` | `denden-base` |
 | Network and remote access | NetworkManager, Tailscale (`denden-tailscale`), `denden-firewall` | `/usr/share/denden/firewall.nft` | `denden-base` |
 | Machine API (`den doctor`, `den machine`/`package`/`service`/`history`, the `den` MCP tools) | `dend` (socket-activated system service, read-only) | interfaces in `/usr/share/varlink/io.denden.*.varlink`; MCP registration: `/etc/codex/config.toml`, and `claude mcp add --scope user` once per user (`den-claude-mcp.service`) | `dend`, `den` |
+| Agent sessions (`den session`, `den secret`) | bubblewrap in a systemd scope (`den-sessions.slice`); workspaces are Btrfs snapshots | sessions in `~/.local/share/den/sessions`, project bases in `~/.cache/den/bases`, log `~/.local/share/den/sessions.log`; sandbox and limits in `/usr/lib/den/session.py`; secrets in the Secret Service | `den` |
 | Package updates | `denden-update`, pacman | `denden-update check` reports recipe, release and runtime changes; after reviewing recipes, `denden-update apply` builds, publishes to `/var/lib/denden/repo`, then runs a full upgrade; daily check: `denden-updates.timer` (user); new upstream releases: `denden-update bump`, daily from `denden-recipes.timer`, which leaves a failed build on branch `recipe-update/<package>-<version>` (log in `~/.local/state/denden/recipe-updates/`): commit the fix on that branch, then `denden-update bump <package>` builds, lands and publishes it | `denden-updates` |
 | Backups | `denden-backup` (restic to the Den Den USB stick) | `/usr/share/denden/backup-excludes`; `denden-backup.timer` | `denden-base` |
 | Lid and power | systemd-logind | `/usr/lib/systemd/logind.conf.d/50-denden.conf` (override in `/etc/systemd/logind.conf.d/`) | `denden-base` |
@@ -120,6 +121,30 @@ you changed.
 
 Den Den's own packages are not fetched this way: their recipes are in
 `/src/denden/packages` (see above).
+
+## Agent sessions
+
+For work that should be sandboxed and reviewed before it lands, use a
+session rather than the project directly:
+
+```sh
+den session create ~/Projects/<repo> [--secret ANTHROPIC_API_KEY]   # prints the session name
+den session run <session> -- <command>…   # in the sandbox, at /workspace
+den session review <session>              # commits, changes, diff
+den session commit <session> [--merge]    # back to the project as branch den/<session>
+den session discard <session>
+```
+
+The workspace is a Btrfs snapshot of the project at its last commit with its
+dependencies installed (ready in well under a second). Inside the sandbox the
+system and the project are read-only, `sudo` doesn't work, the home directory
+is hidden except the package caches and the agents' settings, `$PORT` (and
+`$DEN_PORTS`, 100 ports) and `$COMPOSE_PROJECT_NAME` are the session's own,
+the machine API is at `/system`, and granted secrets are in the environment
+and `/secrets`. `den secret set NAME` stores a secret (an API key) that
+sessions can be granted. At most `$DEN_SESSIONS_MAX` sessions run at once.
+A project's dependencies install with its lockfile's tool, or its executable
+`.den/setup` if it has one.
 
 ## Where to look
 

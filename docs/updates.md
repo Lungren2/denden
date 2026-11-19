@@ -68,6 +68,19 @@ services. Its interfaces are `io.denden.Machine`, `.Package`, `.Service` and
 records the machine already keeps (pacman's log with the snapshots around
 each transaction, snapper, the journal's boots) until milestone 7's event log.
 
+## Agent sessions
+
+`den session create <project>` gives an agent its own workspace: a Btrfs
+snapshot of the project at its last commit with its dependencies installed,
+ready in 0.05 s and free until it changes. `den session run` runs commands
+there in a bubblewrap sandbox: the system and the project read-only, no sudo,
+the home directory hidden except package caches and the agents' settings, its
+own ports and Compose project, memory and CPU limits, and only the secrets
+(`den secret set`) the session was granted. `den session review` shows what
+changed; `den session commit` brings it back to the project as branch
+`den/<session>`, and `discard` throws it away. The measurements behind the
+design are in [session-storage.md](session-storage.md).
+
 ## Changing any program
 
 `den src get <package>` puts the distro's recipe and the source of the

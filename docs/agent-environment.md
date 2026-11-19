@@ -86,6 +86,11 @@ Inside a session the agent sees:
 /desktop     headless Wayland output for computer use (later)
 ```
 
+Built (see [session-storage.md](session-storage.md) for the workspace):
+`/workspace` (a snapshot of the project's base), `/system` (the machine
+API) and `/secrets` (granted secrets, tmpfs); `/history`, `/memory` and
+`/desktop` come with milestones 7 and 8.
+
 Lifecycle: `create → run → review → commit | discard`. Review shows the
 workspace diff plus every brokered system change. Before applying any system
 change, the broker takes a Btrfs snapshot of root, so a bad change is undone
