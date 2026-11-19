@@ -23,7 +23,8 @@ except the shared package caches and the agents' own settings, the
 workspace writable at /workspace, the machine API at /system. Each session
 gets its own ports (PORT, DEN_PORTS), Compose project name and memory and CPU
 limits, and only the secrets it was granted, in its environment and in
-/secrets. At most DEN_SESSIONS_MAX sessions run at once.
+/secrets. Docker stays out unless the session is made with --docker: its
+socket is root on this machine, so such a session isn't sandboxed from it. At most DEN_SESSIONS_MAX sessions run at once.
 
 Commit brings the session's work back to the project as branch den/<name>
 (and with --merge fast-forwards the project's current branch onto it);
@@ -48,6 +49,9 @@ SESSIONS = DATA / 'sessions'
 LOG = DATA / 'sessions.log'
 BASES = Path(os.environ.get('XDG_CACHE_HOME', HOME / '.cache')) / 'den' / 'bases'
 WORKSPACE = '/workspace'
+DOCKER_SOCKETS = ('/run/docker.sock', '/run/containerd/containerd.sock', '/run/podman/podman.sock')
+DOCKER_WARNING = ("this session can use Docker, which is root on this machine: the sandbox "
+                  "doesn't hold anything back from it until rootless Docker (milestone 6)")
 MAX_RUNNING = int(os.environ.get('DEN_SESSIONS_MAX', max(2, (os.cpu_count() or 4) // 3)))
 PORT_BASE, PORTS_EACH, SLOTS = 20000, 100, 100
 LIMITS = {'MemoryHigh': '6G', 'MemoryMax': '8G', 'CPUQuota': f'{(os.cpu_count() or 4) * 50}%',
@@ -191,6 +195,12 @@ def sandbox(workspace, command, session=None, project=None, grants=()):
         args += ['--ro-bind', str(project), str(project)]
     if Path('/run/den').is_dir():
         args += ['--ro-bind', '/run/den', '/system']
+    # Docker's socket is root on this machine (`docker run -v /:/host`), so it
+    # stays out of the sandbox unless the session was made with --docker.
+    if not (session and session.get('docker')):
+        for socket in DOCKER_SOCKETS:
+            if os.path.exists(socket):
+                args += ['--ro-bind', '/dev/null', socket]
     args += ['--bind', str(workspace), WORKSPACE, '--chdir', WORKSPACE,
              '--unshare-pid', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup-try',
              '--die-with-parent', '--hostname', f'den-{session["id"]}' if session else 'den-setup']
@@ -198,7 +208,7 @@ def sandbox(workspace, command, session=None, project=None, grants=()):
         args.append('--new-session')
     env = {'HOME': str(HOME), 'XDG_RUNTIME_DIR': f'/run/user/{UID}', 'DEN_WORKSPACE': WORKSPACE}
     for name in ('DBUS_SESSION_BUS_ADDRESS', 'SSH_AUTH_SOCK', 'WAYLAND_DISPLAY', 'DISPLAY',
-                 'GNOME_KEYRING_CONTROL', 'GH_TOKEN', 'GITHUB_TOKEN'):
+                 'GNOME_KEYRING_CONTROL', 'GH_TOKEN', 'GITHUB_TOKEN', 'DOCKER_HOST'):
         args += ['--unsetenv', name]
     if session:
         first = PORT_BASE + session['slot'] * PORTS_EACH
@@ -348,10 +358,12 @@ def cmd_create(args):
     branch = git(project, 'symbolic-ref', '--quiet', '--short', 'HEAD', check=False) or 'detached HEAD'
     session = {'id': name, 'project': str(project), 'branch': branch, 'base': meta['commit'],
                'created': int(time.time()), 'slot': slot, 'secrets': sorted(set(args.secret or ())),
-               'identity': identity(project),
+               'identity': identity(project), 'docker': bool(args.docker),
                'workspace': str(workspace)}
     save(session)
     record(session, 'create', base=meta['commit'])
+    if session['docker']:
+        say(DOCKER_WARNING)
     if git(project, 'status', '--porcelain', '--untracked-files=no'):
         say(f'{project.name} has uncommitted changes; the session starts from its last commit')
     if args.json:
@@ -368,6 +380,8 @@ def cmd_run(args):
     if session['id'] not in active and len(active) >= MAX_RUNNING:
         raise Fail(f'{len(active)} sessions are running, the most at once (DEN_SESSIONS_MAX={MAX_RUNNING}): '
                    + ', '.join(sorted(active)))
+    if session.get('docker'):
+        say(DOCKER_WARNING)
     command = args.command or [os.environ.get('SHELL', '/bin/bash')]
     if command[0] == '--':
         command = command[1:]
@@ -488,6 +502,8 @@ def add_parsers(top):
     c.add_argument('project')
     c.add_argument('--name')
     c.add_argument('--secret', action='append', metavar='NAME', help='grant a stored secret (repeatable)')
+    c.add_argument('--docker', action='store_true',
+                   help='let the session use Docker (root on this machine: gives up the sandbox)')
     c.add_argument('--json', action='store_true')
     c.set_defaults(fn=cmd_create)
     r = p.add_parser('run', help='run a command (default: a shell) in the session\'s sandbox')

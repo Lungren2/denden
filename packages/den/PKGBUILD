@@ -13,7 +13,7 @@
 
 pkgname=den
 pkgver=0.1.0
-pkgrel=7
+pkgrel=8
 pkgdesc="Den Den's command line: the machine's state, sandboxed agent sessions, and any program changed from its source"
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -29,7 +29,7 @@ source=('den' 'contract.py' 'session.py' 'codex.toml' 'den-claude-mcp' 'den-clau
         'den-sessions.slice')
 sha256sums=('ce4790f3675b4f167b7158d975bf536f5055e4c700ac80137cc1d459d3ccebe6'
             '0f37872da3e357ce0c4e92f8e056742ce31645c795217cc18883519c931911e6'
-            '70234c3011443af6a692779c8980bd463fa633a10912297691158978de9fe53d'
+            '8f878a0b78a510a50f14cc455f9f695df93708714c6f8740691d29d6f2d82560'
             '877c6efbea9f5744299dae2082bca2cb81956fc023fa7519806e0f4387276de3'
             'f75b912d9c918d84a03f0dc09a0974d2bc5604959b63f24ae021153546a386e4'
             '922ee5b9281987835c91c799fcdf5c26f8bf0d9c4a40f8bc72e49c3d2062818c'
