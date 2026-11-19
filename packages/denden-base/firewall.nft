@@ -1,7 +1,8 @@
 #!/usr/sbin/nft -f
 # Den Den's firewall: nothing on the network can open a connection to this
-# machine except over Tailscale. Replies to connections it makes, the
-# machine's own traffic and Docker's networks still pass. Its own table, so
+# machine, or to its containers' published ports, except over Tailscale.
+# Replies to connections it makes, the machine's own traffic and Docker's
+# networks still pass. Its own table, so
 # Docker's and Tailscale's rules are left alone.
 
 table inet denden_firewall
@@ -26,5 +27,15 @@ table inet denden_firewall {
     # Network basics: ping, IPv6 neighbour discovery, DHCPv6 replies.
     meta l4proto { icmp, ipv6-icmp } accept
     udp dport 546 ip6 saddr fe80::/10 accept
+  }
+
+  # A container's published port (docker run -p) arrives through forwarding,
+  # not input, and Docker's own rules let it in from anywhere. New connections
+  # to containers come only over Tailscale or from other containers, like
+  # everything else. A drop here holds whatever Docker's chains accept.
+  chain forward {
+    type filter hook forward priority filter; policy accept;
+
+    oifname { "docker0", "br-*" } ct state new iifname != { "tailscale0", "docker0", "br-*" } drop
   }
 }

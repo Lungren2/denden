@@ -1,0 +1,6 @@
+[Unit]
+Description=Write the agent contract (/etc/denden/AGENTS.md)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/denden-agents

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Write /etc/denden/AGENTS.md, the contract every agent loads: Den Den's own
+# (/usr/share/denden/AGENTS.md, replaced by every update) followed by this
+# machine's rules (/etc/denden/AGENTS.local.md, which updates never touch).
+# Runs after denden-base is installed or upgraded, and whenever the local
+# file changes (denden-agents.path).
+set -eu
+contract=/usr/share/denden/AGENTS.md
+local=/etc/denden/AGENTS.local.md
+out=/etc/denden/AGENTS.md
+mkdir -p /etc/denden
+tmp=$(mktemp /etc/denden/.AGENTS.md.XXXXXX)
+trap 'rm -f "$tmp"' EXIT
+{
+  cat "$contract"
+  if [ -s "$local" ]; then
+    printf '\n## This machine\n\nThe user'"'"'s own rules for this machine (%s):\n\n' "$local"
+    cat "$local"
+  fi
+} >"$tmp"
+chmod 644 "$tmp"
+mv -f "$tmp" "$out"
+trap - EXIT

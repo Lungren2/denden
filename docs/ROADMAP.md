@@ -25,7 +25,9 @@ Each item lands as its own commit against the vanilla baseline.
   Python/uv, .NET), Docker Engine with Compose and Buildx, `base-devel`,
   `devtools`, snapper, snap-pac, bubblewrap
 - [x] `/etc/denden/AGENTS.md`, loaded by Claude Code (`/etc/claude-code/CLAUDE.md`)
-  and Codex (`~/.codex/AGENTS.md` via `/etc/skel`)
+  and Codex (`~/.codex/AGENTS.md` via `/etc/skel`); written from the package's
+  contract plus the machine's own rules (`/etc/denden/AGENTS.local.md`), so
+  those survive updates
 - [x] `t3code-desktop`: the T3 Code desktop app built from source against
   Arch's Electron 44
 - [x] `denden-desktop`: a Niri session that logs in automatically to T3 Code
@@ -57,7 +59,8 @@ What the machine needs before it is the one you work on every day.
   server (T3 lets one server own its data, so a background `t3 service`
   would lock the desktop app out; the app starts at login instead);
   Tailscale with SSH, from a launcher entry (`denden-tailscale`); inbound
-  connections refused except over Tailscale (`denden-firewall`)
+  connections, containers' published ports included, refused except over
+  Tailscale (`denden-firewall`)
 - [x] A desktop shell (Noctalia) in Den Den's colours: taskbar with pinned
   apps, launcher, quick settings, notifications, password dialogs, the startup
   background as wallpaper; Files (Nautilus); GTK apps and the terminal themed
@@ -140,7 +143,8 @@ What the machine needs before it is the one you work on every day.
 - [ ] Capability grants per session, polkit policy, audit log
 - [ ] Mutations (`package install`, `service enable`, …) with automatic root snapshots and rollback
 - [ ] Agents lose the `docker` group (it is root by another name); sessions
-  get rootless Docker
+  get rootless Docker (until then sessions keep Docker out unless made with
+  `--docker`)
 
 ## 7. History & memory
 - [ ] Event log fed by pacman hooks, snapper, journald, broker audit

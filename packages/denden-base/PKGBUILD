@@ -9,7 +9,7 @@
 
 pkgname=denden-base
 pkgver=0.1.0
-pkgrel=15
+pkgrel=16
 pkgdesc='Den Den base system: agents, toolchains, snapshots and the agent contract'
 arch=('any')
 url='https://github.com/Lungren2/denden'
@@ -42,6 +42,10 @@ depends=(
 )
 source=(
   'AGENTS.md'
+  'denden-agents'
+  'denden-agents.hook'
+  'denden-agents.path'
+  'denden-agents.service'
   'agents.tmpfiles'
   'denden-repos'
   'denden-repos.service'
@@ -59,7 +63,11 @@ source=(
   'denden-backup.rules'
   'backup-excludes'
 )
-sha256sums=('315e1dbc6a8dbf03a971482857a47dd37823379bffca884cad82f888de91c8d0'
+sha256sums=('2cd8a0f9fbc453751c6d66d4b59f80d0052dfcc40319d48344c860206d3096a8'
+            '10abd1338752af4dbaa6909aa537802ca61030abb4d15afb84d95e9580dc9be2'
+            '3ae8c9faba40c37253389cce0bd045f1673fa8eb00028298c16bac987630dcd3'
+            'e897c1d236eb53a4cf1ebc42520d39c60274d059a05aefb1320e0d4315121409'
+            '2a84a8461417f9c74e0e93beeb0b8dd2516b516565c1e700e59aeda2b20a6156'
             'dc2944dfeb9ad41503d14c76bcb308e2fa6355ec4bdf891914c99f4bb014217f'
             '109363b84c898a4eaf87cde49ff8db71f2f3d1bb9a62187177d27e80f4429c73'
             '978a0a07a01ed7f4a3c60b63b3a78fea5964fd158947cd420725967f7bc5cf6c'
@@ -68,7 +76,7 @@ sha256sums=('315e1dbc6a8dbf03a971482857a47dd37823379bffca884cad82f888de91c8d0'
             'eda981231171281805468a8790615baffd3e384ba8b98afdc1b64c2e6f85866c'
             'd4d79c520faff353f736621fc894c03e0e09bf2ed748e2c38800c36610025246'
             'b8d65422a3618d528703f54ebae7c1b9d5be87b98a1ae72a17fe6dfba0c1339f'
-            '485f2083f0ca9e211226e68081582770532f7ef18f63a6726c302471e9551057'
+            'a5eb7e4bbd7fa901cfeef572a67d95e7a6c8521b40128297d9330314a50ab332'
             'dc465fef4a4be91032874d0488c6e206cb0d6ba917a7d9de6987e4b4014538dd'
             'b9026e7925b2cce187ed0d0a54bcff184203c641c313c64640a6d7d8e29ccb46'
             '9998f870236c03dc04d2a4f635d14d7b584ccbaa6b540b31a0c081abdd1e9c63'
@@ -78,7 +86,17 @@ sha256sums=('315e1dbc6a8dbf03a971482857a47dd37823379bffca884cad82f888de91c8d0'
             '9bc6dc77db3a7f734bf3e2fc06d13c3c7fbd0f3341fda5db2f5e22a4a0a946c4')
 
 package() {
-  install -Dm644 AGENTS.md "${pkgdir}/etc/denden/AGENTS.md"
+  # The contract every agent loads. /etc/denden/AGENTS.md is written from it
+  # and this machine's own rules (/etc/denden/AGENTS.local.md) by
+  # denden-agents, after every install or upgrade and whenever the local
+  # file changes; so the user's rules survive updates, and updates still
+  # reach the contract.
+  install -Dm644 AGENTS.md "${pkgdir}/usr/share/denden/AGENTS.md"
+  install -Dm755 denden-agents "${pkgdir}/usr/bin/denden-agents"
+  install -Dm644 denden-agents.hook "${pkgdir}/usr/share/libalpm/hooks/denden-agents.hook"
+  install -Dm644 -t "${pkgdir}/usr/lib/systemd/system" denden-agents.path denden-agents.service
+  install -d "${pkgdir}/usr/lib/systemd/system/paths.target.wants"
+  ln -s ../denden-agents.path "${pkgdir}/usr/lib/systemd/system/paths.target.wants/denden-agents.path"
 
   # Claude Code loads this file as managed instructions in every session.
   install -d "${pkgdir}/etc/claude-code"

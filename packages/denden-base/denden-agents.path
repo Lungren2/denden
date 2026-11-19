@@ -1,0 +1,9 @@
+[Unit]
+Description=Rewrite the agent contract when this machine's own rules change
+
+[Path]
+PathChanged=/etc/denden/AGENTS.local.md
+Unit=denden-agents.service
+
+[Install]
+WantedBy=paths.target

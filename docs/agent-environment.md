@@ -39,7 +39,7 @@ those channels instead of inventing a new one:
 
 | Channel | What the OS provides |
 | --- | --- |
-| Instructions | `/etc/denden/AGENTS.md`: the system contract, loaded into every session |
+| Instructions | `/etc/denden/AGENTS.md`: the system contract, loaded into every session, with the machine's own rules from `/etc/denden/AGENTS.local.md` appended |
 | Tools | `den` MCP server: the same operations as the CLI, typed |
 | Shell | `den` CLI with `--json` on every command |
 | Files | A fixed session layout (below) |

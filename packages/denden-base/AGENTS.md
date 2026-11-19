@@ -23,7 +23,8 @@ the part below and change it.
   needs other versions pins them in its `mise.toml` (`mise use node@22`);
   mise's shims are on `PATH` ahead of the system's, so pinned versions win
   inside that project.
-- Inbound network connections are refused except over Tailscale. To expose a
+- Inbound network connections, to the machine and to containers' published
+  ports, are refused except over Tailscale. To expose a
   dev server to the user's other devices, bind it and give them the
   machine's Tailscale address (`tailscale ip`); don't open firewall ports.
 - You run as the user. `sudo` works without a password.
@@ -49,6 +50,10 @@ the part below and change it.
    let them decide.
 7. Screens the user sees should look like a product: no terminal windows or
    technical text on normal paths, no taglines.
+8. Leave nothing behind from your own testing: delete the test files,
+   scratch repositories, sessions, branches, containers, images and build
+   output you made, and don't commit tests that only checked a one-off
+   change.
 
 ## Map of the system
 
@@ -66,7 +71,7 @@ override the system ones, so try a change there first.
 | Terminal | Ghostty running fish, with a starship prompt | `~/.config/ghostty/config.local` over Den Den's `/usr/share/denden/ghostty/config`; `~/.config/fish/config.fish` over `/usr/share/fish/vendor_conf.d/denden.fish`; prompt `~/.config/starship.toml` over `/usr/share/denden/starship.toml` | `denden-desktop` |
 | Browser and default apps | Helium | `~/.config/mimeapps.list` over `/etc/xdg/mimeapps.list` | `denden-desktop` |
 | GTK app theme | dconf | `gsettings set org.gnome.desktop.interface …`; defaults in `/etc/dconf/db/local.d/00-denden` | `denden-desktop` |
-| Agents | T3 Code (desktop app, `t3`), Claude Code, Codex | this file: `/etc/denden/AGENTS.md`, linked as each agent's user-level instructions | `denden-base`, `t3code-*` |
+| Agents | T3 Code (desktop app, `t3`), Claude Code, Codex | this file: `/etc/denden/AGENTS.md`, linked as each agent's user-level instructions. It is written from Den Den's `/usr/share/denden/AGENTS.md` plus this machine's own rules in `/etc/denden/AGENTS.local.md`: put a rule for this machine there (with sudo), never in `AGENTS.md`, which every update rewrites; it is merged in at once and survives updates | `denden-base`, `t3code-*` |
 | Shell environment | bash (login shell; fish in the terminal starts from it), mise | `/etc/profile.d/denden.sh` (login shells), `/usr/lib/environment.d/50-denden.conf` (desktop session) | `denden-base` |
 | GitHub repositories | `denden-repos` (user timer) | `denden-repos.service`/`.timer` | `denden-base` |
 | Network and remote access | NetworkManager, Tailscale (`denden-tailscale`), `denden-firewall` | `/usr/share/denden/firewall.nft` | `denden-base` |
@@ -141,7 +146,10 @@ system and the project are read-only, `sudo` doesn't work, the home directory
 is hidden except the package caches and the agents' settings, `$PORT` (and
 `$DEN_PORTS`, 100 ports) and `$COMPOSE_PROJECT_NAME` are the session's own,
 the machine API is at `/system`, and granted secrets are in the environment
-and `/secrets`. `den secret set NAME` stores a secret (an API key) that
+and `/secrets`. Docker is out of reach unless the session is created with
+`--docker`; its socket is root on this machine, so such a session isn't
+sandboxed from it (until milestone 6's rootless Docker): use it only when the
+task needs containers. `den secret set NAME` stores a secret (an API key) that
 sessions can be granted. At most `$DEN_SESSIONS_MAX` sessions run at once.
 A project's dependencies install with its lockfile's tool, or its executable
 `.den/setup` if it has one.
